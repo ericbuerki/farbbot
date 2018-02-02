@@ -77,6 +77,7 @@ class VibrantPy(object):
                 print('len(farbe) < 1')
                 print(farbe.get_farben())
 
+        '''
         for i in range(3):      #Vibrant
             self.farben_len[i] = len(self.farben[i])
         for i in range(3):
@@ -86,7 +87,7 @@ class VibrantPy(object):
 
         for i in range(6):
             self.farben[sort[i]].select_final()
-        '''
+        
         self.farben[v_sort[0]].select_final()
         self.farben[v_sort[1]].select_final(f_avoid=True,
                                  f_compare=self.farben[v_sort[0]].get_farben())
