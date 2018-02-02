@@ -95,6 +95,15 @@ class VibrantPy(object):
                                  f_compare=self.farben[v_sort[1]].get_farben())
         '''
 
+        #   TODO
+        #   Passe Farben dem Target an
+        #
+
+        tmp = np.vstack((self.farben[i].get_farben() for i in range(6)))
+        f_final = Farben(tmp, modus=7)
+        self.f_final = f_final.get_farben()
+
+        
 
 
         order = [0, 3, 1, 4, 2, 5]
@@ -108,6 +117,9 @@ class VibrantPy(object):
     def get_farben(self):
         return self.farben_list
 
+    def get_f_final(self):
+        return self.f_final
+
     def get_farben_tot(self):
         return self.farben_tot
 
@@ -118,7 +130,7 @@ class Farben(object):
         self.modus = modus
         self.farben = farben
 
-        # 0-5: Farbnamen, 6: Alle, 7: (beinahe) Fertig (für self.target(delta))
+        # 0-5: Farbnamen, 6: Alle, 7: (beinahe) Fertig
         if self.modus < 6:
             self.select()
             #self.cluster()
@@ -126,6 +138,8 @@ class Farben(object):
         if self.modus == 6:
             self.quantize(k=128)
             #self.recomp('rgb',['hsv','lab'])
+        if self.modus == 7:
+            self.cluster()
         if rec:
             self.target()
 
@@ -373,34 +387,39 @@ class Farben(object):
         target_muted_saturation = 77
         target_vibrant_saturation = 256
 
+        target_final_luma = 160
+
         wl = 6      # Gewichtung des Lumas
         ws = 3      # Gewichtung der Sättigung
         wp = 1      # Gewichtung der Häufigkeit
 
+        if self.modus == 0:         # Vibrant
+            target0 = np.abs(self.farben[:,2]-target_normal_luma)
+            target1 = np.abs(self.farben[:,1]-target_vibrant_saturation)
+        elif self.modus == 1:       # Muted
+            target0 = np.abs(self.farben[:,2]-target_normal_luma)
+            target1 = np.abs(self.farben[:,1]-target_muted_saturation)
+        elif self.modus == 2:       # DarkVibrant
+            target0 = np.abs(self.farben[:,2]-target_dark_luma)
+            target1 = np.abs(self.farben[:,1]-target_vibrant_saturation)
+        elif self.modus == 3:       # DarkMuted
+            target0 = np.abs(self.farben[:,2]-target_dark_luma)
+            target1 = np.abs(self.farben[:,1]-target_muted_saturation)
+        elif self.modus == 4:       # LightVibrant
+            target0 = np.abs(self.farben[:,2]-target_light_luma)
+            target1 = np.abs(self.farben[:,1]-target_vibrant_saturation)
+        elif self.modus == 5:       # LightMuted
+            target0 = np.abs(self.farben[:,2]-target_light_luma)
+            target1 = np.abs(self.farben[:,1]-target_muted_saturation)
+        elif self.modus == 7:       # Fast Fertig
+            target0 = np.abs(self.farben[:,2]-target_final_luma)
+            target1 = np.abs(self.farben[:,1]-target_vibrant_saturation)
+            
         if enable_delta:
-            wl = 1
-            ws = 2
+            wl = 2
+            ws = 1
             wp = 0
-
-        if self.modus == 0:          # Vibrant
-            target0 = np.abs(self.farben[:,2]-target_normal_luma)
-            target1 = np.abs(self.farben[:,1]-target_vibrant_saturation)
-        elif self.modus == 1:        # Muted
-            target0 = np.abs(self.farben[:,2]-target_normal_luma)
-            target1 = np.abs(self.farben[:,1]-target_muted_saturation)
-        elif self.modus == 2:        # DarkVibrant
-            target0 = np.abs(self.farben[:,2]-target_dark_luma)
-            target1 = np.abs(self.farben[:,1]-target_vibrant_saturation)
-        elif self.modus == 3:        # DarkMuted
-            target0 = np.abs(self.farben[:,2]-target_dark_luma)
-            target1 = np.abs(self.farben[:,1]-target_muted_saturation)
-        elif self.modus == 4:        # LightVibrant
-            target0 = np.abs(self.farben[:,2]-target_light_luma)
-            target1 = np.abs(self.farben[:,1]-target_vibrant_saturation)
-        elif self.modus == 5:        # LightMuted
-            target0 = np.abs(self.farben[:,2]-target_light_luma)
-            target1 = np.abs(self.farben[:,1]-target_muted_saturation)
-
+        
         target2 = np.abs(self.farben[:,3]-255)
 
         delta = (target0 * wl + target1 * ws + target2 * wp)/3
@@ -485,7 +504,7 @@ class Farben(object):
 
 if __name__ == '__main__':
     os.system('rm paletten/*')
-    fn = 'samples/bild16.jpg'
+    fn = 'samples/bild03.jpg'
     # os.system('eog %s' % fn)
     vibrant = VibrantPy(fn, r=False)
 
@@ -493,7 +512,13 @@ if __name__ == '__main__':
     farben_tot = farben_tot[farben_tot[:,3] > 1]
     farben_tot = farben_tot[farben_tot[:,0].argsort()]
     farben_list = vibrant.get_farben()
+    ff_final = vibrant.get_f_final()
 
+    palette = Bild(fn, None, np.uint8(ff_final[:,4:7]),
+                   debug=True, pop=ff_final[:,3])
+    palette.erstelle_palette()
+
+    '''
     f_count = 0
     for farben in farben_list:
         fn_temp = os.path.splitext(fn)
@@ -517,17 +542,5 @@ if __name__ == '__main__':
 
     palette = Bild(fn, None, np.uint8(farben_tot[:,4:7]),
                    debug=True, pop=farben_tot[:,3])
-    palette.erstelle_palette()
-
-    '''
-    farben = farben[farben[:,7].argsort()[::-1]]
-    print('farben')
-    print(farben)
-    np.savetxt('farben/vibrant.csv', farben, delimiter=',')
-    print('farben.shape[0]')
-    print(farben.shape[0])
-
-    palette = Bild(fn, None, np.uint8(farben[:,4:7]),
-                   debug=True, pop=farben[:,3])
     palette.erstelle_palette()
     '''
