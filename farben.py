@@ -15,6 +15,7 @@ from palette import Bild
 np.set_printoptions(precision=1, edgeitems=7, suppress=True)
 farbnamen = ['Vibrant', 'Muted', 'DarkVibrant',
              'DarkMuted', 'LightVibrant', 'LightMuted']
+ff_anz = 7
 
 class VibrantPy(object):
     def __init__(self, filename, r=200, k=64):
@@ -72,7 +73,7 @@ class VibrantPy(object):
         for farbe in self.farben:
             #print(farbe.get_mode())
             if len(farbe) > 1:
-                farbe.cluster('db_hue')
+                farbe.cluster('db_hue_ff')
             else:
                 print('len(farbe) < 1')
                 print(farbe.get_farben())
@@ -102,6 +103,7 @@ class VibrantPy(object):
         tmp = np.vstack((self.farben[i].get_farben() for i in range(6)))
         f_final = Farben(tmp, modus=7)
         self.f_final = f_final.get_farben()
+        self.f_final = tmp
 
         
 
@@ -127,10 +129,11 @@ class VibrantPy(object):
 
 class Farben(object):
     def __init__(self, farben, modus=6, rec=False):
-        self.modus = modus
-        self.farben = farben
+        self.modus = modus      # Farbe in farbnamen
+        self.farben = farben    # Farben als numpy-array
+        self.rec = rec          # Rekursiv (True/False)
 
-        # 0-5: Farbnamen, 6: Alle, 7: (beinahe) Fertig
+        # 0-5: Farbnamen, 6: Alle, 7,8: (beinahe) Fertig,(8 ohne Cluster)
         if self.modus < 6:
             self.select()
             #self.cluster()
@@ -139,8 +142,10 @@ class Farben(object):
             self.quantize(k=128)
             #self.recomp('rgb',['hsv','lab'])
         if self.modus == 7:
-            self.cluster()
-        if rec:
+            self.cluster('db_hue_ff')
+        if self.modus == 8:
+            self.target()
+        if self.rec:
             self.target()
 
 
@@ -353,30 +358,42 @@ class Farben(object):
                 labels = set(db.labels_[db.labels_ != -1])
             else:
                 labels = set(db.labels_)
+            
             farben_tmp = np.zeros((len(labels),10), dtype='float32')
 
-            mode_select = 0          # 0: target, 1: np.mean
             for i in labels:
-                #print('Farbe %s' % i)
-                #print(self.farben[db.labels_ == i][:,4:7])
-                if mode_select == 0:
                     f_tmp =  Farben(self.farben[db.labels_ == i],
-                                    modus=self.modus, rec=True)
-                    #print('\t\tf_tmp.get_farben()')
-                    #print(f_tmp.get_farben())
+                                    modus=8, rec=True)
                     farben_tmp[i] = f_tmp.get_farben()
-                if mode_select == 1:
-                    f_tmp =  np.mean(self.farben[db.labels_ == i][:,4:7],
-                                     axis=0)
-                    pop = self.farben[db.labels_ == i][:,3].sum()
-                    farben_tmp[i,4:7] = f_tmp
-                    farben_tmp[i,3] = pop
-            #print('\t\tfarben_tmp')
-            #print(farben_tmp)
             self.farben = farben_tmp
-            #print('self.farben')
-            #print(self.farben)
             self.recomp('rgb',['hsv','lab'])
+
+        if mode == 'db_hue_ff':
+            hue_sin = np.sin((self.farben[:,0]/360)*2*np.pi)    # -> x
+            hue_sin = hue_sin.reshape((-1,1))
+            hue_cos = np.cos((self.farben[:,0]/360)*2*np.pi)    # -> y
+            hue_cos = hue_cos.reshape((-1,1))
+
+            # 0:    Nur Hue
+            # 1:    Hue, S, V
+            m = 1
+            db = DBSCAN(eps=0.6, min_samples=0)\
+                        .fit(np.hstack((hue_sin, hue_cos)))
+
+            noise = (len(db.labels_[db.labels_==-1])/len(db.labels_))*100
+            print('\t\tRauschen: %.2f %%' % noise)
+
+            labels = set(db.labels_[db.labels_!=-1])
+
+            tmp = np.empty((0,10), dtype='float32')
+            for i in labels:
+                f_tmp = Farben(self.farben[db.labels_==i],
+                               modus=8,
+                               rec=True)
+                tmp = np.vstack((tmp, f_tmp.get_farben()))
+            self.farben = tmp
+            
+            
 
     def target(self, enable_delta=False):
         # Wählt passendste Farbe aus
@@ -411,9 +428,12 @@ class Farben(object):
         elif self.modus == 5:       # LightMuted
             target0 = np.abs(self.farben[:,2]-target_light_luma)
             target1 = np.abs(self.farben[:,1]-target_muted_saturation)
-        elif self.modus == 7:       # Fast Fertig
+        elif self.modus >= 7:       # Fast Fertig
             target0 = np.abs(self.farben[:,2]-target_final_luma)
             target1 = np.abs(self.farben[:,1]-target_vibrant_saturation)
+            wl = 2
+            ws = 2
+            wp = 1
             
         if enable_delta:
             wl = 2
@@ -422,10 +442,16 @@ class Farben(object):
         
         target2 = np.abs(self.farben[:,3]-255)
 
+        print('self.modus')
+        print(self.modus)
         delta = (target0 * wl + target1 * ws + target2 * wp)/3
 
         target = delta.argsort()
-        target = target[0]
+        if not self.rec:
+            target = target[0]
+        else:
+            target = target[:ff_anz]
+
         if enable_delta:
             self.delta = delta
         else:
@@ -504,7 +530,7 @@ class Farben(object):
 
 if __name__ == '__main__':
     os.system('rm paletten/*')
-    fn = 'samples/bild03.jpg'
+    fn = 'samples/bild08.jpg'
     # os.system('eog %s' % fn)
     vibrant = VibrantPy(fn, r=False)
 
