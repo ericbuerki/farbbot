@@ -68,6 +68,7 @@ class VibrantPy(object):
 
         self.farben[v_sort[1]].deldup(self.farben[v_sort[0]].get_farben())
         self.farben[v_sort[2]].deldup(self.farben[v_sort[1]].get_farben())
+        
 
         for farbe in self.farben:
             #print(farbe.get_mode())
@@ -84,15 +85,26 @@ class VibrantPy(object):
 
         v_sort = self.farben_len[:3].argsort()
 
+        '''
         for i in range(6):
+            if i 
             self.farben[sort[i]].select_final()
         '''
+
+        # Vibrant
+
         self.farben[v_sort[0]].select_final()
         self.farben[v_sort[1]].select_final(f_avoid=True,
                                  f_compare=self.farben[v_sort[0]].get_farben())
         self.farben[v_sort[2]].select_final(f_avoid=True,
                                  f_compare=self.farben[v_sort[1]].get_farben())
-        '''
+
+        # Muted
+        self.farben[m_sort[0]].select_final()
+        self.farben[m_sort[1]].select_final(f_avoid=True,
+                                 f_compare=self.farben[m_sort[0]].get_farben())
+        self.farben[m_sort[2]].select_final(f_avoid=True,
+                                 f_compare=self.farben[m_sort[1]].get_farben())
 
 
 
@@ -379,7 +391,7 @@ class Farben(object):
         if enable_delta:
             wl = 1
             ws = 2
-            wp = 0
+            wp = 6
 
         if self.modus == 0:          # Vibrant
             target0 = np.abs(self.farben[:,2]-target_normal_luma)
@@ -436,7 +448,7 @@ class Farben(object):
         print(self.farben)
         print('f_compare')
         print(f_compare)
-        if not f_avoid:
+        if f_avoid == False:
             self.farben = self.farben[self.delta.argmin()]
             print('Ausgewählte Farbe in %s:' % farbnamen[self.modus])
             print(self.farben)
@@ -453,12 +465,13 @@ class Farben(object):
 
             print('anz_avoid')
             print(anz_avoid)
+        print('='*80)
 
     def winkel_dist(self, winkel0, winkel1):
         a = winkel1 - winkel0
         b = winkel1 - (360 - winkel0)
         try:
-            dist = np.min(np.hstack((a, b)), axis=1)
+            dist = np.min(np.hstack((a, b)), axis=0)
             print('winkel_dist: try')
         except:
             dist = np.hstack((a, b))
@@ -484,7 +497,7 @@ class Farben(object):
 
 if __name__ == '__main__':
     os.system('rm paletten/*')
-    fn = 'samples/bild16.jpg'
+    fn = 'samples/bild03.jpg'
     # os.system('eog %s' % fn)
     vibrant = VibrantPy(fn, r=False)
 
