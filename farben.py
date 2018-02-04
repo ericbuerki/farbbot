@@ -66,12 +66,11 @@ class VibrantPy(object):
         print('farben_len:\t%s' % self.farben_len)
         print('sort:\t\t%s' % sort)
 
-        self.farben[v_sort[1]].deldup(self.farben[v_sort[0]].get_farben())
-        self.farben[v_sort[2]].deldup(self.farben[v_sort[1]].get_farben())
-        self.farben[m_sort[1]].deldup(self.farben[m_sort[0]].get_farben())
-        self.farben[m_sort[2]].deldup(self.farben[m_sort[1]].get_farben())
-        
 
+
+
+        
+        '''
         for farbe in self.farben:
             #print(farbe.get_mode())
             if len(farbe) > 1:
@@ -87,7 +86,7 @@ class VibrantPy(object):
 
         v_sort = self.farben_len[:3].argsort()
         m_sort = self.farben_len[3:].argsort()
-        
+        '''
 
 
 
@@ -121,6 +120,7 @@ class Farben(object):
         if self.modus == 6:
             self.quantize(k=256)
             #self.recomp('rgb',['hsv','lab'])
+            self.cluster('init')
         if self.rec:
             self.target()
 
@@ -311,10 +311,12 @@ class Farben(object):
         if mode == 'af':
             af = AffinityPropagation().fit(self.farben[:,4:7])
             self.farben = self.farben[af.cluster_centers_indices_]
+
         if mode == 'db':
             db = DBSCAN(eps=40, min_samples=0).fit(self.farben[:,4:7])
             self.farben = self.farben[db.labels_]
             self.farben = np.unique(self.farben, axis=0)
+            
         if mode == 'db_hue':
             hue_sin = np.sin((self.farben[:,0]/360)*2*np.pi)    # -> x
             hue_sin = hue_sin.reshape((-1,1))
@@ -322,7 +324,7 @@ class Farben(object):
             hue_cos = hue_cos.reshape((-1,1))
             
             
-            db = DBSCAN(eps=0.1, min_samples=0)\
+            db = DBSCAN(eps=0.2, min_samples=0)\
                  .fit(np.hstack((hue_sin, hue_cos)))
             noise = (len(db.labels_[db.labels_==-1])/len(db.labels_))*100
             print('\t\tRauschen: %.2f %%' % noise)
@@ -354,6 +356,35 @@ class Farben(object):
             self.farben = farben_tmp
             #print('self.farben')
             #print(self.farben)
+            self.recomp('rgb',['hsv','lab'])
+
+        if mode=='init':
+            print('clustere Bild, modus=%s' % mode)
+            hue_sin = np.sin((self.farben[:,0]/360)*2*np.pi)    # -> x
+            hue_sin = hue_sin.reshape((-1,1))
+            hue_cos = np.cos((self.farben[:,0]/360)*2*np.pi)    # -> y
+            hue_cos = hue_cos.reshape((-1,1))
+            farben_sv = np.copy(self.farben[:,1:3])/255
+            hsv_fitted = np.hstack((hue_sin, hue_cos, farben_sv))
+            
+            
+            db = DBSCAN(eps=0.1, min_samples=2)\
+                 .fit(hsv_fitted)
+
+            noise = (len(db.labels_[db.labels_==-1])/len(db.labels_))*100
+            print('\t\tRauschen: %.2f %%' % noise)
+
+            labels = set(db.labels_[db.labels_ != -1])
+            print('Anzahl labels: %s' % len(labels))
+            farben_tmp = np.zeros((len(labels),10), dtype='float32')
+            
+            for i in labels:
+                f_tmp = np.mean(self.farben[db.labels_ == i][:,4:7],
+                                axis=0)
+                pop = self.farben[db.labels_ == i][:,3].sum()
+                farben_tmp[i,4:7] = f_tmp
+                farben_tmp[i,3] = pop
+            self.farben = farben_tmp
             self.recomp('rgb',['hsv','lab'])
 
     def target(self, enable_delta=False):
