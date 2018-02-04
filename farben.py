@@ -68,6 +68,8 @@ class VibrantPy(object):
 
         self.farben[v_sort[1]].deldup(self.farben[v_sort[0]].get_farben())
         self.farben[v_sort[2]].deldup(self.farben[v_sort[1]].get_farben())
+        self.farben[m_sort[1]].deldup(self.farben[m_sort[0]].get_farben())
+        self.farben[m_sort[2]].deldup(self.farben[m_sort[1]].get_farben())
         
 
         for farbe in self.farben:
@@ -84,27 +86,8 @@ class VibrantPy(object):
             self.farben_len[i+3] = len(self.farben[i+3])
 
         v_sort = self.farben_len[:3].argsort()
-
-        '''
-        for i in range(6):
-            if i 
-            self.farben[sort[i]].select_final()
-        '''
-
-        # Vibrant
-
-        self.farben[v_sort[0]].select_final()
-        self.farben[v_sort[1]].select_final(f_avoid=True,
-                                 f_compare=self.farben[v_sort[0]].get_farben())
-        self.farben[v_sort[2]].select_final(f_avoid=True,
-                                 f_compare=self.farben[v_sort[1]].get_farben())
-
-        # Muted
-        self.farben[m_sort[0]].select_final()
-        self.farben[m_sort[1]].select_final(f_avoid=True,
-                                 f_compare=self.farben[m_sort[0]].get_farben())
-        self.farben[m_sort[2]].select_final(f_avoid=True,
-                                 f_compare=self.farben[m_sort[1]].get_farben())
+        m_sort = self.farben_len[3:].argsort()
+        
 
 
 
@@ -128,6 +111,7 @@ class Farben(object):
     def __init__(self, farben, modus=6, rec=False):
         self.modus = modus
         self.farben = farben
+        self.rec = rec      # ob rekursiv oder nicht
 
         # 0-5: Farbnamen, 6: Alle, 7: (beinahe) Fertig (für self.target(delta))
         if self.modus < 6:
@@ -135,9 +119,9 @@ class Farben(object):
             #self.cluster()
             #self.target()
         if self.modus == 6:
-            self.quantize(k=128)
+            self.quantize(k=256)
             #self.recomp('rgb',['hsv','lab'])
-        if rec:
+        if self.rec:
             self.target()
 
 
@@ -317,7 +301,7 @@ class Farben(object):
         self.farben = self.farben[bedingung]
 
 
-        only_pop = self.farben[:,3] > 2
+        only_pop = self.farben[:,3] > 5
         if np.any(only_pop) == True:
             noise = (np.sum(~only_pop)/len(only_pop))*100
             #print('Rauschen: %.2f%%' % noise)
@@ -336,15 +320,12 @@ class Farben(object):
             hue_sin = hue_sin.reshape((-1,1))
             hue_cos = np.cos((self.farben[:,0]/360)*2*np.pi)    # -> y
             hue_cos = hue_cos.reshape((-1,1))
-
-            for i in np.arange(0.05,1,0.05):
-                db = DBSCAN(eps=i, min_samples=1)\
-                     .fit(np.hstack((hue_sin, hue_cos)))
-                if len(set(db.labels_)) <= 5:
-                    break
-
+            
+            
+            db = DBSCAN(eps=0.1, min_samples=0)\
+                 .fit(np.hstack((hue_sin, hue_cos)))
             noise = (len(db.labels_[db.labels_==-1])/len(db.labels_))*100
-            #print('\t\tRauschen: %.2f %%' % noise)
+            print('\t\tRauschen: %.2f %%' % noise)
 
             if len(set(db.labels_)) > 2:
                 labels = set(db.labels_[db.labels_ != -1])
@@ -392,6 +373,11 @@ class Farben(object):
             wl = 1
             ws = 2
             wp = 6
+
+        if self.rec:
+            wl = 0
+            ws = 1
+            wp = 2
 
         if self.modus == 0:          # Vibrant
             target0 = np.abs(self.farben[:,2]-target_normal_luma)
