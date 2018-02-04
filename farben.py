@@ -66,12 +66,15 @@ class VibrantPy(object):
         print('farben_len:\t%s' % self.farben_len)
         print('sort:\t\t%s' % sort)
 
-
+        
         self.farben[v_sort[1]].deldup(self.farben[v_sort[0]].get_farben())
         self.farben[v_sort[2]].deldup(self.farben[v_sort[1]].get_farben())
         self.farben[m_sort[1]].deldup(self.farben[m_sort[0]].get_farben())
         self.farben[m_sort[2]].deldup(self.farben[m_sort[1]].get_farben())
+        
 
+        for farbe in self.farben:
+            farbe.target()
         
         '''
         for farbe in self.farben:
@@ -235,7 +238,7 @@ class Farben(object):
                     
         if self.modus == 6:
             print('self.modus == %s' % self.modus)
-            cond = np.logical_and(self.farben[:,2] > 30, self.farben[:,1] > 30)
+            cond = np.logical_and(self.farben[:,2] > 25, self.farben[:,1] > 50)
             self.farben=self.farben[cond]
 
     def quantize(self, k=64):
@@ -334,7 +337,7 @@ class Farben(object):
             hue_cos = hue_cos.reshape((-1,1))
             
             
-            db = DBSCAN(eps=0.2, min_samples=0)\
+            db = DBSCAN(eps=0.1, min_samples=0)\
                  .fit(np.hstack((hue_sin, hue_cos)))
             noise = (len(db.labels_[db.labels_==-1])/len(db.labels_))*100
             print('\t\tRauschen: %.2f %%' % noise)
@@ -374,11 +377,11 @@ class Farben(object):
             hue_sin = hue_sin.reshape((-1,1))
             hue_cos = np.cos((self.farben[:,0]/360)*2*np.pi)    # -> y
             hue_cos = hue_cos.reshape((-1,1))
-            farben_sv = np.copy(self.farben[:,1:3])/127.5       #255
+            farben_sv = np.copy(self.farben[:,1:3])/255   #255/127.5/63.75
             hsv_fitted = np.hstack((hue_sin, hue_cos, farben_sv))
             
             
-            db = DBSCAN(eps=0.1, min_samples=0)\
+            db = DBSCAN(eps=0.05, min_samples=0)\
                  .fit(hsv_fitted)
 
             noise = (len(db.labels_[db.labels_==-1])/len(db.labels_))*100
@@ -525,7 +528,7 @@ class Farben(object):
 
 if __name__ == '__main__':
     os.system('rm paletten/*')
-    fn = 'samples/bild07.jpg'
+    fn = 'samples/bild12.jpg'
     # os.system('eog %s' % fn)
     vibrant = VibrantPy(fn, r=200)
 
