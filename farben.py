@@ -66,12 +66,11 @@ class VibrantPy(object):
         print('farben_len:\t%s' % self.farben_len)
         print('sort:\t\t%s' % sort)
 
-        
         self.farben[v_sort[1]].deldup(self.farben[v_sort[0]].get_farben())
         self.farben[v_sort[2]].deldup(self.farben[v_sort[1]].get_farben())
         self.farben[m_sort[1]].deldup(self.farben[m_sort[0]].get_farben())
         self.farben[m_sort[2]].deldup(self.farben[m_sort[1]].get_farben())
-        
+
 
         for farbe in self.farben:
             farbe.target()
