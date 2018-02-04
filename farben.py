@@ -118,9 +118,9 @@ class Farben(object):
             #self.cluster()
             #self.target()
         if self.modus == 6:
-            self.quantize(k=256)
-            #self.recomp('rgb',['hsv','lab'])
+            self.recomp('rgb',['hsv','lab'])
             self.cluster('init')
+            #self.quantize(k=256)
         if self.rec:
             self.target()
 
@@ -229,6 +229,9 @@ class Farben(object):
                     f_temp_rgb = color.lab2rgb([f_temp])[0]
                     f_temp_rgb *= 255
                     self.farben[4:7] = f_temp_rgb
+                    
+        if self.modus == '6':
+            self.farben=self.farben[self.farben[:,2]>30 & self.farben[:,1]>30]
 
     def quantize(self, k=64):
         mode = 1
@@ -260,6 +263,8 @@ class Farben(object):
 
         self.farben[:,3] /= np.max(self.farben[:,3])
         self.farben[:,3] *= 255
+        # Löscht farben mit Pop < 3
+        self.farben = self.farben[self.farben[:,3] > 3]
         self.recomp('rgb', ['hsv', 'lab'])
 
     def select(self):
@@ -359,16 +364,16 @@ class Farben(object):
             self.recomp('rgb',['hsv','lab'])
 
         if mode=='init':
-            print('clustere Bild, modus=%s' % mode)
+            print('clustere Bild,\tmodus=%s' % mode)
             hue_sin = np.sin((self.farben[:,0]/360)*2*np.pi)    # -> x
             hue_sin = hue_sin.reshape((-1,1))
             hue_cos = np.cos((self.farben[:,0]/360)*2*np.pi)    # -> y
             hue_cos = hue_cos.reshape((-1,1))
-            farben_sv = np.copy(self.farben[:,1:3])/255
+            farben_sv = np.copy(self.farben[:,1:3])/127.5
             hsv_fitted = np.hstack((hue_sin, hue_cos, farben_sv))
             
             
-            db = DBSCAN(eps=0.1, min_samples=2)\
+            db = DBSCAN(eps=0.1, min_samples=0)\
                  .fit(hsv_fitted)
 
             noise = (len(db.labels_[db.labels_==-1])/len(db.labels_))*100
@@ -379,10 +384,10 @@ class Farben(object):
             farben_tmp = np.zeros((len(labels),10), dtype='float32')
             
             for i in labels:
-                f_tmp = np.mean(self.farben[db.labels_ == i][:,4:7],
-                                axis=0)
+                cond = self.farben[db.labels_==i][:,3].argmax()
+                f_tmp = self.farben[db.labels_==i][cond]
                 pop = self.farben[db.labels_ == i][:,3].sum()
-                farben_tmp[i,4:7] = f_tmp
+                farben_tmp[i] = f_tmp
                 farben_tmp[i,3] = pop
             self.farben = farben_tmp
             self.recomp('rgb',['hsv','lab'])
@@ -516,7 +521,7 @@ if __name__ == '__main__':
     os.system('rm paletten/*')
     fn = 'samples/bild03.jpg'
     # os.system('eog %s' % fn)
-    vibrant = VibrantPy(fn, r=False)
+    vibrant = VibrantPy(fn, r=200)
 
     farben_tot = vibrant.get_farben_tot()
     farben_tot = farben_tot[farben_tot[:,3] > 1]
