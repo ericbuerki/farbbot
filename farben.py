@@ -67,7 +67,10 @@ class VibrantPy(object):
         print('sort:\t\t%s' % sort)
 
 
-
+        self.farben[v_sort[1]].deldup(self.farben[v_sort[0]].get_farben())
+        self.farben[v_sort[2]].deldup(self.farben[v_sort[1]].get_farben())
+        self.farben[m_sort[1]].deldup(self.farben[m_sort[0]].get_farben())
+        self.farben[m_sort[2]].deldup(self.farben[m_sort[1]].get_farben())
 
         
         '''
@@ -120,7 +123,7 @@ class Farben(object):
         if self.modus == 6:
             self.recomp('rgb',['hsv','lab'])
             self.cluster('init')
-            #self.quantize(k=256)
+            #self.quantize(k=128)
         if self.rec:
             self.target()
 
@@ -230,8 +233,10 @@ class Farben(object):
                     f_temp_rgb *= 255
                     self.farben[4:7] = f_temp_rgb
                     
-        if self.modus == '6':
-            self.farben=self.farben[self.farben[:,2]>30 & self.farben[:,1]>30]
+        if self.modus == 6:
+            print('self.modus == %s' % self.modus)
+            cond = np.logical_and(self.farben[:,2] > 30, self.farben[:,1] > 30)
+            self.farben=self.farben[cond]
 
     def quantize(self, k=64):
         mode = 1
@@ -369,7 +374,7 @@ class Farben(object):
             hue_sin = hue_sin.reshape((-1,1))
             hue_cos = np.cos((self.farben[:,0]/360)*2*np.pi)    # -> y
             hue_cos = hue_cos.reshape((-1,1))
-            farben_sv = np.copy(self.farben[:,1:3])/127.5
+            farben_sv = np.copy(self.farben[:,1:3])/127.5       #255
             hsv_fitted = np.hstack((hue_sin, hue_cos, farben_sv))
             
             
@@ -391,6 +396,7 @@ class Farben(object):
                 farben_tmp[i,3] = pop
             self.farben = farben_tmp
             self.recomp('rgb',['hsv','lab'])
+            self.farben = self.farben[self.farben[:,3].argsort()][::-1]
 
     def target(self, enable_delta=False):
         # Wählt passendste Farbe aus
@@ -519,7 +525,7 @@ class Farben(object):
 
 if __name__ == '__main__':
     os.system('rm paletten/*')
-    fn = 'samples/bild03.jpg'
+    fn = 'samples/bild07.jpg'
     # os.system('eog %s' % fn)
     vibrant = VibrantPy(fn, r=200)
 
