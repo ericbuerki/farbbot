@@ -73,6 +73,7 @@ class VibrantPy(object):
         self.farben[m_sort[1]].deldup(self.farben[m_sort[0]].get_farben())
         self.farben[m_sort[2]].deldup(self.farben[m_sort[1]].get_farben())
 
+
         for farbe in self.farben:
             farbe.target()
 
@@ -128,6 +129,8 @@ class Farben(object):
 
         # 0-5: Farbnamen, 6: Alle, 7: (beinahe) Fertig (für self.target(delta))
         if self.modus < 6:
+            if self.rec:
+                print(self.farben)
             self.select()
             if not self.rec:
                 self.cluster('db_hue')
@@ -185,6 +188,10 @@ class Farben(object):
                 f_temp = np.copy(self.farben[:, 4:7])
                 f_temp /= 255
                 if 'hsv' in dest:
+                    print('f_temp')
+                    print(f_temp)
+                    print('f_temp.shape')
+                    print(f_temp.shape)
                     f_temp_hsv = color.rgb2hsv([f_temp])[0]
                     f_temp_hsv[:, 0] *= 360  # 179
                     f_temp_hsv[:, 1:] *= 255
@@ -344,7 +351,7 @@ class Farben(object):
             hue_cos = np.cos((self.farben[:, 0] / 360) * 2 * np.pi)  # -> y
             hue_cos = hue_cos.reshape((-1, 1))
 
-            db = DBSCAN(eps=0.1, min_samples=0) \
+            db = DBSCAN(eps=0.05, min_samples=0) \
                 .fit(np.hstack((hue_sin, hue_cos)))
             noise = (len(db.labels_[db.labels_ == -1]) / len(db.labels_)) * 100
             print('\t\tRauschen: %.2f %%' % noise)
@@ -360,8 +367,10 @@ class Farben(object):
             print(farbnamen[self.modus])
             print(labels)
             for i in labels:
-                print('self.farben[db.labels_ == %s]' % i)
-                print(self.farben[db.labels_ == i])
+                print('self.farben[db.labels_ == %s].shape' % i)
+                print(self.farben[db.labels_ == i].shape)
+                print('self.modus')
+                print(self.modus)
                 f_tmp = Farben(self.farben[db.labels_ == i],
                                modus=self.modus, rec=True)
                 print('Label %s' % i)
@@ -449,20 +458,18 @@ class Farben(object):
         target2 = np.abs(self.farben[:, 3] - 255)
 
         delta = (target0 * wl + target1 * ws + target2 * wp) / 3
-        print('delta')
-        print(delta)
 
         target = delta.argsort()
 
-        try:
-            target = target[:0]
-        except:
-            print('Erstellen von Target fehlgeschlagen')
+        if self.rec:
+            target = target[0]
 
         if enable_delta:
             self.delta = delta
         else:
             self.farben = self.farben[target]
+            print('self.target() in self.farben')
+            print(self.farben)
 
     def deldup(self, farben_comp):
         # Löscht Doppelte Farben im Array
