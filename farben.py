@@ -110,6 +110,17 @@ class VibrantPy(object):
         return self.farben_tot
 
 
+def winkel_dist(winkel0, winkel1):
+    a = winkel1 - winkel0
+    b = winkel1 - (360 - winkel0)
+    try:
+        dist = np.min(np.hstack((a, b)), axis=0)
+        print('winkel_dist: try')
+    except:
+        dist = np.hstack((a, b))
+        print('winkel_dist: except')
+    return dist
+
 
 class Farben(object):
     def __init__(self, farben, modus=6, rec=False):
@@ -314,7 +325,7 @@ class Farben(object):
 
 
         only_pop = self.farben[:,3] > 5
-        if np.any(only_pop) == True:
+        if np.any(only_pop):
             noise = (np.sum(~only_pop)/len(only_pop))*100
             #print('Rauschen: %.2f%%' % noise)
             self.farben = self.farben[only_pop]
@@ -478,7 +489,7 @@ class Farben(object):
         print(self.farben)
         print('f_compare')
         print(f_compare)
-        if f_avoid == False:
+        if not f_avoid:
             self.farben = self.farben[self.delta.argmin()]
             print('Ausgewählte Farbe in %s:' % farbnamen[self.modus])
             print(self.farben)
@@ -487,26 +498,15 @@ class Farben(object):
             count = 0
             for farbe in self.farben[:,0]:
                 if len(f_compare.shape) == 2:
-                    w_dist = self.winkel_dist(farbe, f_compare[:,0])
+                    w_dist = winkel_dist(farbe, f_compare[:,0])
                 if len(f_compare.shape) == 1:
-                    w_dist = self.winkel_dist(farbe, f_compare[0])
+                    w_dist = winkel_dist(farbe, f_compare[0])
                 anz_avoid[count] = len(w_dist[w_dist < 20])
                 count += 1
 
             print('anz_avoid')
             print(anz_avoid)
         print('='*80)
-
-    def winkel_dist(self, winkel0, winkel1):
-        a = winkel1 - winkel0
-        b = winkel1 - (360 - winkel0)
-        try:
-            dist = np.min(np.hstack((a, b)), axis=0)
-            print('winkel_dist: try')
-        except:
-            dist = np.hstack((a, b))
-            print('winkel_dist: except')
-        return dist
 
     def get_farben(self):
         return self.farben
