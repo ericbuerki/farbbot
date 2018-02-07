@@ -252,7 +252,7 @@ class Farben(object):
             print('self.modus == %s' % self.modus)
             cond_temp = np.logical_and(self.farben[:, 2] > 25,
                                        self.farben[:, 2] < 230)
-            cond = np.logical_and(self.farben[:, 1] > 50, cond_temp)
+            cond = np.logical_and(self.farben[:, 1] > 25, cond_temp)
             self.farben = self.farben[cond]
 
     def quantize(self, k=64):
