@@ -5,6 +5,7 @@ import os
 
 import numpy as np
 from PIL import Image
+import matplotlib.pyplot as plt
 
 from skimage import color
 from sklearn.cluster import DBSCAN,AffinityPropagation
@@ -46,9 +47,13 @@ class VibrantPy(object):
         farben_tmp[:,3] /= np.max(farben_tmp[:,3])
         farben_tmp[:,3] *= 255
 
+        create_hist(farben_tmp[:,3], 'Pop nach __init__', bins=200)
+
         alle = Farben(farben_tmp,6)
         self.farben_tot = alle.farben
         self.farben = []
+
+        create_hist(self.farben_tot[:,3], 'Pop nach DBSCAN', bins=200)
 
         # 0-2:  *Vibrant
         # 3-5:  *Muted
@@ -70,6 +75,11 @@ class VibrantPy(object):
 
         order = [0, 3, 1, 4, 2, 5]
         self.farben = [self.farben[i] for i in order]
+
+        self.sort()
+        print('Anzahl Farben')
+        for name_len in zip(farbnamen, self.farben_len):
+            print('%s: %s' % name_len)
 
         self.farben_list = []
         for i in range(6):
@@ -94,7 +104,6 @@ class VibrantPy(object):
             self.farben[self.sort_ind[i+1]].deldup(self.farben[self.sort_ind[i]].farben)
             self.farben[self.sort_ind[i+4]].deldup(self.farben[self.sort_ind[i+3]].farben)
 
-
     def get_farben(self):
         return self.farben_list
 
@@ -114,7 +123,8 @@ class Farben(object):
         # 7:    (beinahe) Fertig (für self.target(delta))
         if 0 <= self.modus < 6:
             if self.rec:
-                print(self.farben)
+                # print(self.farben)
+                pass
             self.select()
             if not self.rec:
                 self.cluster('db_hue')
@@ -238,9 +248,9 @@ class Farben(object):
         mode = 1
         # Quantisiert Bild in k Farben
         if (self.farben.shape[0] % 2) is not 0:
-            print('self.farben.shape')
-            print(self.farben.shape)
-            print('Anzahl Farben ist ungerade, experimentell')
+            #print('self.farben.shape')
+            #print(self.farben.shape)
+            #print('Anzahl Farben ist ungerade, experimentell')
             self.farben = np.vstack((self.farben,
                                      np.zeros(10,dtype='float32')))
 
@@ -318,7 +328,7 @@ class Farben(object):
             self.farben = self.farben[af.cluster_centers_indices_]
 
         if mode == 'db':
-            db = DBSCAN(eps=40,min_samples=0).fit(self.farben[:,4:7])
+            db = DBSCAN(eps=40, min_samples=0).fit(self.farben[:,4:7])
             self.farben = self.farben[db.labels_]
             self.farben = np.unique(self.farben,axis=0)
 
@@ -328,25 +338,24 @@ class Farben(object):
             hue_cos = np.cos((self.farben[:,0] / 360) * 2 * np.pi)  # -> y
             hue_cos = hue_cos.reshape((-1,1))
 
-            db = DBSCAN(eps=0.05,min_samples=0).fit(np.hstack((hue_sin,hue_cos)))
+            db = DBSCAN(eps=0.05,min_samples=0).fit(np.hstack((hue_sin, hue_cos)))
 
             if len(set(db.labels_)) > 2:
                 labels = set(db.labels_[db.labels_ != -1])
             else:
                 labels = set(db.labels_)
-            farben_tmp = np.zeros((len(labels),10),dtype='float32')
-            keep_tmp = np.ones(len(labels),dtype='bool')
+            farben_tmp = np.zeros((len(labels),10), dtype='float32')
+            keep_tmp = np.ones(len(labels), dtype='bool')
 
             for i in labels:
-                f_tmp = Farben(self.farben[db.labels_ == i],
-                               modus=self.modus, rec=True)
+                f_tmp = Farben(self.farben[db.labels_ == i], modus=self.modus, rec=True)
                 if len(f_tmp.farben.shape) == 1:
                     farben_tmp[i] = f_tmp.farben
                 else:
                     keep_tmp[i] = False
 
             self.farben = farben_tmp[keep_tmp]
-            self.recomp('rgb',['hsv','lab'])
+            self.recomp('rgb', ['hsv', 'lab'])
 
         if mode == 'init':
             print('clustere Bild,\tmodus=%s' % mode)
@@ -360,7 +369,7 @@ class Farben(object):
             db = DBSCAN(eps=0.05, min_samples=0).fit(hsv_fitted)
 
             labels = set(db.labels_[db.labels_ != -1])
-            farben_tmp = np.zeros((len(labels),10),dtype='float32')
+            farben_tmp = np.zeros((len(labels), 10), dtype='float32')
 
             for i in labels:
                 cond = self.farben[db.labels_ == i][:,3].argmax()
@@ -369,9 +378,13 @@ class Farben(object):
                 farben_tmp[i] = f_tmp
                 farben_tmp[i,3] = pop
 
+            # print('pop vor teilung')
+            # print(farben_tmp[:,3])
             farben_tmp[:,3] /= np.max(farben_tmp[:,3])
             # farben_tmp[:,3] = 2 * farben_tmp[:,3] - farben_tmp[:,3] ** 2
             farben_tmp[:,3] *= 255
+            # print('pop nach teilung')
+            # print(farben_tmp[:,3])
 
             self.farben = farben_tmp
             self.recomp('rgb',['hsv','lab'])
@@ -425,8 +438,8 @@ class Farben(object):
             self.delta = delta
 
         self.farben = self.farben[target]
-        print('self.target() in self.farben')
-        print(self.farben)
+        # print('self.target() in self.farben')
+        # print(self.farben)
 
     def deldup(self,farben_comp):
         # Löscht Doppelte Farben im Array
@@ -440,7 +453,8 @@ class Farben(object):
             for j in range(farben_comp.shape[0]):
                 # print('i: %s   j: %s' % (i,j))
                 if np.all(self.farben[i] == farben_comp[j]):
-                    keep[i] = 0
+                    print('\t\tBingo!')
+                    keep[i] = False
 
         self.farben = self.farben[keep]
 
@@ -462,11 +476,22 @@ class Farben(object):
             return 'leer'
 
 
+def create_hist(onedarray, title, bins=20):
+    plt.hist(onedarray, bins=bins)
+    if title:
+        plt.title(title)
+    else:
+        plt.title('Histogramm')
+    plt.xlabel('Wert')
+    plt.ylabel('Häufigkeit')
+    plt.show()
+
+
 if __name__ == '__main__':
     os.system('rm paletten/*')
     fn = 'samples/bild03.jpg'
     # os.system('eog %s' % fn)
-    vibrant = VibrantPy(fn,r=50)
+    vibrant = VibrantPy(fn,r=200)
 
     farben_tot = vibrant.farben_tot
     farben_tot = farben_tot[farben_tot[:,3] > 1]
