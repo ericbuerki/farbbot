@@ -44,16 +44,25 @@ class VibrantPy(object):
             farben_tmp[row,3] = farbe[0]
             farben_tmp[row,4:7] = farbe[1]
             row += 1
-        farben_tmp[:,3] /= np.max(farben_tmp[:,3])
+
+        '''
+        print('np.sum(farben_tmp[:,3])')
+        print(np.sum(farben_tmp[:,3]))
+        print('np.max(farben_tmp[:,3])')
+        print(np.max(farben_tmp[:,3]))
+        print('np.min(farben_tmp[:,3])')
+        print(np.min(farben_tmp[:,3]))
+        '''
+        farben_tmp[:,3] /= normpop(farben_tmp[:,3])
         farben_tmp[:,3] *= 255
 
-        create_hist(farben_tmp[:,3], 'Pop nach __init__', bins=200)
+        create_hist(farben_tmp[:,3], 'Pop nach farben.__init__', bins=200)
 
-        alle = Farben(farben_tmp,6)
+        alle = Farben(farben_tmp, 6)
         self.farben_tot = alle.farben
         self.farben = []
 
-        create_hist(self.farben_tot[:,3], 'Pop nach DBSCAN', bins=200)
+        create_hist(self.farben_tot[:,3], 'Pop nach DBSCAN', bins=10)
 
         # 0-2:  *Vibrant
         # 3-5:  *Muted
@@ -132,6 +141,7 @@ class Farben(object):
         if self.modus == 6:
             self.recomp('rgb', ['hsv', 'lab'])
             self.cluster('init')
+            self.purge_irrelevant()
             # self.quantize(k=128)
         if self.rec:
             self.target()
@@ -238,11 +248,11 @@ class Farben(object):
                     f_temp_rgb *= 255
                     self.farben[4:7] = f_temp_rgb
 
-        if self.modus == 6:
-            cond_temp = np.logical_and(self.farben[:,2] > 25,
-                                       self.farben[:,2] < 230)
-            cond = np.logical_and(self.farben[:,1] > 25,cond_temp)
-            self.farben = self.farben[cond]
+    def purge_irrelevant(self):
+        cond_temp = np.logical_and(self.farben[:,2] > 25,
+                                   self.farben[:,2] < 230)
+        cond = np.logical_and(self.farben[:,1] > 25, cond_temp)
+        self.farben = self.farben[cond]
 
     def quantize(self,k=64):
         mode = 1
@@ -374,10 +384,13 @@ class Farben(object):
             for i in labels:
                 cond = self.farben[db.labels_ == i][:,3].argmax()
                 f_tmp = self.farben[db.labels_ == i][cond]
-                pop = self.farben[db.labels_ == i][:,3].max()
+                pop = self.farben[db.labels_ == i][:,3].sum()
                 farben_tmp[i] = f_tmp
                 farben_tmp[i,3] = pop
 
+            farben_tmp[:,3] = normpop(farben_tmp[:,3])
+            farben_tmp[:,3] *= 255
+            '''
             # print('pop vor teilung')
             # print(farben_tmp[:,3])
             farben_tmp[:,3] /= np.max(farben_tmp[:,3])
@@ -385,7 +398,7 @@ class Farben(object):
             farben_tmp[:,3] *= 255
             # print('pop nach teilung')
             # print(farben_tmp[:,3])
-
+            '''
             self.farben = farben_tmp
             self.recomp('rgb',['hsv','lab'])
             self.farben = self.farben[self.farben[:,3].argsort()][::-1]
@@ -484,12 +497,22 @@ def create_hist(onedarray, title, bins=20):
         plt.title('Histogramm')
     plt.xlabel('Wert')
     plt.ylabel('Häufigkeit')
-    plt.show()
+    _fn = 'plots/%s.png' % title.replace(' ', '_')
+    plt.savefig(_fn)
+
+def normpop(nparray):
+    # normalisiert Häufigkeitswerte und wendet 1-(1-x)²
+    pop_tmp = nparray / nparray.sum()
+    pop_tmp = 1 - (1 - pop_tmp) ** 4
+    print('Max:\t%s' % pop_tmp.max())
+    print('Min:\t%s' % pop_tmp.min())
+    print('Sum:\t%s' % pop_tmp.sum())
+    return pop_tmp
 
 
 if __name__ == '__main__':
     os.system('rm paletten/*')
-    fn = 'samples/bild03.jpg'
+    fn = 'samples/bild08.jpg'
     # os.system('eog %s' % fn)
     vibrant = VibrantPy(fn,r=200)
 
