@@ -12,9 +12,9 @@ from sklearn.cluster import DBSCAN,AffinityPropagation
 
 from palette import Bild
 
-np.set_printoptions(precision=1, edgeitems=7, suppress=True)
-farbnamen = ['Vibrant', 'Muted', 'DarkVibrant',
-             'DarkMuted', 'LightVibrant', 'LightMuted']
+np.set_printoptions(precision=1,edgeitems=7,suppress=True)
+farbnamen = ['Vibrant','Muted','DarkVibrant',
+             'DarkMuted','LightVibrant','LightMuted']
 
 
 class VibrantPy(object):
@@ -48,38 +48,44 @@ class VibrantPy(object):
         farben_tmp[:,3] /= normpop(farben_tmp[:,3])
         farben_tmp[:,3] *= 255
 
-        create_hist(farben_tmp[:,3], 'Pop nach farben.__init__', bins=200)
+        create_hist(farben_tmp[:,3],'Pop nach farben.__init__',bins=200)
 
-        alle = Farben(farben_tmp, 6)
+        alle = Farben(farben_tmp,6)
         self.farben_tot = alle.farben
         self.farben = []
 
-        create_hist(self.farben_tot[:,3], 'Pop nach DBSCAN', bins=10)
+        create_hist(self.farben_tot[:,3],'Pop nach DBSCAN',bins=10)
 
         # 0-2:  *Vibrant
         # 3-5:  *Muted
         for i in range(3):  # Vibrant
-            self.farben.append(Farben(self.farben_tot, i * 2))
+            self.farben.append(Farben(self.farben_tot,i * 2))
             # self.farben_len[i] = len(self.farben[i])
         for i in range(3):  # Muted
-            self.farben.append(Farben(self.farben_tot, i * 2 + 1))
+            self.farben.append(Farben(self.farben_tot,i * 2 + 1))
             # self.farben_len[i + 3] = len(self.farben[i + 3])
 
-        self.farben_len = np.empty(6, dtype='uint8')
-        self.sort_ind = np.zeros(len(self.farben), dtype='uint8')
+        self.farben_len = np.empty(6,dtype='uint8')
+        self.sort_ind = np.zeros(len(self.farben),dtype='uint8')
 
         # Entferne Duplikate
         self.ddwrap()
 
+        self.sort()
+        print('self.sort_ind')
+        print(self.sort_ind)
+        # TODO: self.sort_ind in zweidimensionalen Array umwandeln.
+        # Und anschliessend finale Farben der Länge nach auswählen.
+
         for farbe in self.farben:
             farbe.target()
 
-        order = [0, 3, 1, 4, 2, 5]
+        order = [0,3,1,4,2,5]
         self.farben = [self.farben[i] for i in order]
 
         self.sort()
         print('Anzahl Farben')
-        for name_len in zip(farbnamen, self.farben_len):
+        for name_len in zip(farbnamen,self.farben_len):
             print('%s: %s' % name_len)
 
         self.farben_list = []
@@ -89,21 +95,22 @@ class VibrantPy(object):
     def sort(self):
         # Sortiert Farbbehälter der Länge nach
         # Vibrant und Muted separat
-        self.farben_len = np.empty(6, dtype='uint8')
+        self.farben_len = np.empty(6,dtype='uint8')
         for i in range(6):
             self.farben_len[i] = len(self.farben[i])
 
         # self.sort enthält die Indizes für self.farben()
-        self.sort_ind = np.zeros(len(self.farben), dtype='uint8')
-        self.sort_ind[:3] = self.farben_len[:3].argsort()     # Vibrant
-        self.sort_ind[3:] = self.farben_len[3:].argsort() + 3 # Muted
+        self.sort_ind = np.zeros(len(self.farben),dtype='uint8')
+        self.sort_ind[:3] = self.farben_len[:3].argsort()  # Vibrant
+        self.sort_ind[3:] = self.farben_len[3:].argsort() + 3  # Muted
 
     def ddwrap(self):
         # Führt self.deldup() in Farben aus
         self.sort()
         for i in range(2):
-            self.farben[self.sort_ind[i+1]].deldup(self.farben[self.sort_ind[i]].farben)
-            self.farben[self.sort_ind[i+4]].deldup(self.farben[self.sort_ind[i+3]].farben)
+            self.farben[self.sort_ind[i + 1]].deldup(self.farben[self.sort_ind[i]].farben)
+            self.farben[self.sort_ind[i + 4]].deldup(
+                self.farben[self.sort_ind[i + 3]].farben)
 
     def get_farben(self):
         return self.farben_list
@@ -113,7 +120,7 @@ class VibrantPy(object):
 
 
 class Farben(object):
-    def __init__(self, _farben, modus=6, rec=False):
+    def __init__(self,_farben,modus=6,rec=False):
         self.modus = modus
         self.farben = _farben
         self.rec = rec  # ob rekursiv oder nicht
@@ -131,7 +138,7 @@ class Farben(object):
                 self.cluster('db_hue')
             # self.target()
         if self.modus == 6:
-            self.recomp('rgb', ['hsv', 'lab'])
+            self.recomp('rgb',['hsv','lab'])
             self.cluster('init')
             self.purge_irrelevant()
             # self.quantize(k=128)
@@ -243,16 +250,16 @@ class Farben(object):
     def purge_irrelevant(self):
         cond_temp = np.logical_and(self.farben[:,2] > 25,
                                    self.farben[:,2] < 230)
-        cond = np.logical_and(self.farben[:,1] > 25, cond_temp)
+        cond = np.logical_and(self.farben[:,1] > 25,cond_temp)
         self.farben = self.farben[cond]
 
     def quantize(self,k=64):
         mode = 1
         # Quantisiert Bild in k Farben
         if (self.farben.shape[0] % 2) is not 0:
-            #print('self.farben.shape')
-            #print(self.farben.shape)
-            #print('Anzahl Farben ist ungerade, experimentell')
+            # print('self.farben.shape')
+            # print(self.farben.shape)
+            # print('Anzahl Farben ist ungerade, experimentell')
             self.farben = np.vstack((self.farben,
                                      np.zeros(10,dtype='float32')))
 
@@ -324,31 +331,33 @@ class Farben(object):
             # print('Rauschen: %.2f%%' % noise)
             self.farben = self.farben[only_pop]
 
-    def cluster(self, mode='af'):
+    def cluster(self,mode='af'):
         if mode == 'af':
             af = AffinityPropagation().fit(self.farben[:,4:7])
             self.farben = self.farben[af.cluster_centers_indices_]
 
         if mode == 'db':
-            db = DBSCAN(eps=40, min_samples=0).fit(self.farben[:,4:7])
+            db = DBSCAN(eps=40,min_samples=0).fit(self.farben[:,4:7])
             self.farben = self.farben[db.labels_]
             self.farben = np.unique(self.farben,axis=0)
 
         if mode == 'db_hue':
+            print('Farben.cluster(\'db_hue\') %s' % farbnamen[self.modus])
+
             hue_sin = np.sin((self.farben[:,0] / 360) * 2 * np.pi)  # -> x
             hue_sin = hue_sin.reshape((-1,1))
             hue_cos = np.cos((self.farben[:,0] / 360) * 2 * np.pi)  # -> y
             hue_cos = hue_cos.reshape((-1,1))
 
-            durchg = 0      # Zähler für durchgänge
-            epsilon = 0.05  # Epsilon am anfang
+            durchg = 0  # Zähler für durchgänge
+            epsilon = 0.5  # Epsilon am anfang (ursprüngl: 0.05
             while True:
-                db = DBSCAN(eps=epsilon, min_samples=0).fit(np.hstack((hue_sin, hue_cos)))
+                db = DBSCAN(eps=epsilon,min_samples=0).fit(np.hstack((hue_sin,hue_cos)))
 
                 print('\tDBSCAN Durchgang %s' % durchg)
                 durchg += 1
 
-                if len(set(db.labels_)) > 1:
+                if len(set(db.labels_)) > 2:
                     break
                 else:
                     epsilon -= 0.01
@@ -358,36 +367,37 @@ class Farben(object):
 
             labels = set(db.labels_[db.labels_ != -1])
 
-            farben_tmp = np.zeros((len(labels),10), dtype='float32')
-            keep_tmp = np.ones(len(labels), dtype='bool')
+            farben_tmp = np.zeros((len(labels),10),dtype='float32')
+            keep_tmp = np.ones(len(labels),dtype='bool')
 
             for i in labels:
-                print('\tLabel %s, Farben %s ' % (i, len(self.farben[db.labels_ == i])))
-                f_tmp = Farben(self.farben[db.labels_ == i], modus=self.modus, rec=True)
+                print('\tLabel %s, Farben %s ' % (i,len(self.farben[db.labels_ == i])))
+                f_tmp = Farben(self.farben[db.labels_ == i],modus=self.modus,rec=True)
                 if len(f_tmp.farben.shape) == 1:
                     farben_tmp[i] = f_tmp.farben
                 else:
                     keep_tmp[i] = False
 
-            print('Farben.cluster(\'db_hue\') %s' % farbnamen[self.modus])
-            print('Reduktionsfaktor: %0.2f %%' % ((len(labels) / self.farben.shape[0])*100))
+            print('Reduktionsfaktor: %0.2f %%' % (
+                    (len(labels) / self.farben.shape[0]) * 100))
 
             self.farben = farben_tmp[keep_tmp]
-            self.recomp('rgb', ['hsv', 'lab'])
+            self.recomp('rgb',['hsv','lab'])
+            print('-' * 20)
 
         if mode == 'init':
             print('clustere Bild,\tmodus=%s' % mode)
             hue_sin = np.sin((self.farben[:,0] / 360) * 2 * np.pi)  # -> x
-            hue_sin = hue_sin.reshape((-1, 1))
+            hue_sin = hue_sin.reshape((-1,1))
             hue_cos = np.cos((self.farben[:,0] / 360) * 2 * np.pi)  # -> y
-            hue_cos = hue_cos.reshape((-1, 1))
+            hue_cos = hue_cos.reshape((-1,1))
             farben_sv = np.copy(self.farben[:,1:3]) / 255  # 255/127.5/63.75
-            hsv_fitted = np.hstack((hue_sin, hue_cos, farben_sv))
+            hsv_fitted = np.hstack((hue_sin,hue_cos,farben_sv))
 
-            durchg = 0      # Zähler für Durchgänge
+            durchg = 0  # Zähler für Durchgänge
             epsilon = 0.05  # Epsilon zu Beginn
             while True:
-                db = DBSCAN(eps=epsilon, min_samples=0).fit(hsv_fitted)
+                db = DBSCAN(eps=epsilon,min_samples=0).fit(hsv_fitted)
 
                 print('\tDBSCAN Durchgang %s' % durchg)
                 durchg += 1
@@ -398,7 +408,7 @@ class Farben(object):
                     epsilon -= 0.01
 
             labels = set(db.labels_[db.labels_ != -1])
-            farben_tmp = np.zeros((len(labels), 10), dtype='float32')
+            farben_tmp = np.zeros((len(labels),10),dtype='float32')
 
             for i in labels:
                 cond = self.farben[db.labels_ == i][:,3].argmax()
@@ -411,7 +421,8 @@ class Farben(object):
             farben_tmp[:,3] *= 255
 
             print('Farben.cluster(\'init\')')
-            print('Reduktionsfaktor: %0.2f %%' % ((farben_tmp.shape[0]/self.farben.shape[0])*100))
+            print('Reduktionsfaktor: %0.2f %%' % (
+                    (farben_tmp.shape[0] / self.farben.shape[0]) * 100))
 
             self.farben = farben_tmp
             self.recomp('rgb',['hsv','lab'])
@@ -503,19 +514,20 @@ class Farben(object):
             return 'leer'
 
 
-def create_hist(onedarray, title, bins=20):
-    plt.hist(onedarray, bins=bins)
+def create_hist(onedarray,title,bins=20):
+    plt.hist(onedarray,bins=bins)
     if title:
         plt.title(title)
     else:
         plt.title('Histogramm')
     plt.xlabel('Wert')
     plt.ylabel('Häufigkeit')
-    _fn = 'plots/%s.png' % title.replace(' ', '_')
+    _fn = 'plots/%s.png' % title.replace(' ','_')
     plt.savefig(_fn)
 
+
 def normpop(nparray):
-    # normalisiert Häufigkeitswerte und wendet 1-(1-x)²
+    # normalisiert Häufigkeitswerte und wendet 1-(1-x)¹⁰
     pop_tmp = nparray / nparray.sum()
     pop_tmp = 1 - (1 - pop_tmp) ** 10
     print('Max:\t%s' % pop_tmp.max())
@@ -526,14 +538,14 @@ def normpop(nparray):
 
 if __name__ == '__main__':
     os.system('rm paletten/*')
-    fn = 'samples/bild08.jpg'
+    fn = 'samples/bild16.jpg'
 
     # os.system('eog %s' % fn)
     print('Starte Programm')
     vibrant = VibrantPy(fn,r=200)
 
     farben_tot = vibrant.farben_tot
-    farben_tot = farben_tot[farben_tot[:,3] > 1]
+    # farben_tot = farben_tot[farben_tot[:,3] > 1]
     farben_tot = farben_tot[farben_tot[:,0].argsort()]
     farben_list = vibrant.farben_list
 
@@ -561,3 +573,5 @@ if __name__ == '__main__':
     palette = Bild(fn,None,np.uint8(farben_tot[:,4:7]),
                    debug=True,pop=farben_tot[:,3])
     palette.erstelle_palette()
+    fn_temp_np = 'farben/%s_Palette.csv' % f_count
+    np.savetxt(fn_temp_np,farben_tot,delimiter=',')

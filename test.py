@@ -12,7 +12,7 @@ from farben import VibrantPy
 fn = 'samples/bild07.jpg'
 vibr = VibrantPy(fn, r=200)
 
-vibrant = vibr.get_farben()[0]
+vibrant = vibr.farben_tot
 print('vibrant.shape')
 print(vibrant.shape)
 
