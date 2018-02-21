@@ -15,10 +15,28 @@ from palette import Bild
 np.set_printoptions(precision=1,edgeitems=7,suppress=True)
 farbnamen = ['Vibrant','Muted','DarkVibrant',
              'DarkMuted','LightVibrant','LightMuted']
+farbnamen_alt = ['Vibrant','DarkVibrant','LightVibrant',
+                 'Muted','DarkMuted','LightMuted']
 
 
 class VibrantPy(object):
     def __init__(self,filename,r=200,k=64):
+
+        # Objektvariabeln
+        self.farben = []
+        # Python-Liste, die alle Farbbehälter(Farben()) enthält.
+        # Reihenfolge der Farben gemäss farbnamen
+
+        self.farben_len = np.empty(6,dtype='uint8')
+        # np-Array, Anzahl Farben der Farbbbehälter enthaltend.
+        # Reihenfolge gemäss farbnamen_alt
+
+        self.sort_ind = np.zeros((2,3),dtype='uint8')
+        # zweidimensionaler np-Array, die
+
+        self.farben_final = np.zeros((6,10), dtype='float32')
+
+
         print('VibrantPy\nQuantisiere %s' % filename)
 
         bild = Image.open(filename)
@@ -52,7 +70,6 @@ class VibrantPy(object):
 
         alle = Farben(farben_tmp,6)
         self.farben_tot = alle.farben
-        self.farben = []
 
         create_hist(self.farben_tot[:,3],'Pop nach DBSCAN',bins=10)
 
@@ -65,17 +82,20 @@ class VibrantPy(object):
             self.farben.append(Farben(self.farben_tot,i * 2 + 1))
             # self.farben_len[i + 3] = len(self.farben[i + 3])
 
-        self.farben_len = np.empty(6,dtype='uint8')
-        self.sort_ind = np.zeros(len(self.farben),dtype='uint8')
-
         # Entferne Duplikate
         self.ddwrap()
 
         self.sort()
         print('self.sort_ind')
-        print(self.sort_ind)
+        # print(self.sort_ind)
+        for ind_anz in zip(farbnamen_alt, self.farben_len, self.sort_ind):
+            print('Farbe: %s\nAnzahl Farben: %s\nSort.Ind.: %s\n\n' % ind_anz)
         # TODO: self.sort_ind in zweidimensionalen Array umwandeln.
         # Und anschliessend finale Farben der Länge nach auswählen.
+
+        # Wählt die Endgültigen Farben aus.
+        # Definiert self.farben_final (np.array (6,10), dtype='float32')
+        self.select_final()
 
         for farbe in self.farben:
             farbe.target()
@@ -83,10 +103,12 @@ class VibrantPy(object):
         order = [0,3,1,4,2,5]
         self.farben = [self.farben[i] for i in order]
 
+        '''
         self.sort()
         print('Anzahl Farben')
-        for name_len in zip(farbnamen,self.farben_len):
+        for name_len in zip(farbnamen, self.farben_len):
             print('%s: %s' % name_len)
+        '''
 
         self.farben_list = []
         for i in range(6):
@@ -98,19 +120,30 @@ class VibrantPy(object):
         self.farben_len = np.empty(6,dtype='uint8')
         for i in range(6):
             self.farben_len[i] = len(self.farben[i])
+            #print('%s, Länge %s' % (farbnamen_alt[i], self.farben_len[i]))
 
         # self.sort enthält die Indizes für self.farben()
-        self.sort_ind = np.zeros(len(self.farben),dtype='uint8')
-        self.sort_ind[:3] = self.farben_len[:3].argsort()  # Vibrant
-        self.sort_ind[3:] = self.farben_len[3:].argsort() + 3  # Muted
+        self.sort_ind = np.zeros((2,3),dtype='uint8')
+        self.sort_ind[0] = self.farben_len[:3].argsort()  # Vibrant
+        self.sort_ind[1] = self.farben_len[3:].argsort() + 3  # Muted
+        print('Sortierindizes')
+        print('Vibrant\t%s' % str(self.sort_ind[0]))
+        print('Muted\t%s' % str(self.sort_ind[1]))
 
     def ddwrap(self):
         # Führt self.deldup() in Farben aus
         self.sort()
         for i in range(2):
-            self.farben[self.sort_ind[i + 1]].deldup(self.farben[self.sort_ind[i]].farben)
-            self.farben[self.sort_ind[i + 4]].deldup(
-                self.farben[self.sort_ind[i + 3]].farben)
+            self.farben[self.sort_ind[0,i+1]].deldup(self.farben[self.sort_ind[0,i]].farben)
+            self.farben[self.sort_ind[1,i+1]].deldup(self.farben[self.sort_ind[1,i]].farben)
+
+    def select_final(self):
+        self.sort()
+        if len(np.unique(self.farben_len[:3])) is not len(self.farben_len[:3]):
+            print('Mehrere Farbbehälter sind gleich gross. Noch nicht implementiert.')
+        else:
+            #if self.farben[self.sort_ind[0,0]]
+            pass
 
     def get_farben(self):
         return self.farben_list
@@ -351,9 +384,11 @@ class Farben(object):
 
             durchg = 0  # Zähler für durchgänge
             epsilon = 0.5  # Epsilon am anfang (ursprüngl: 0.05
-            while True:
-                db = DBSCAN(eps=epsilon,min_samples=0).fit(np.hstack((hue_sin,hue_cos)))
 
+            '''
+            while True:
+
+                db = DBSCAN(eps=epsilon,min_samples=0).fit(np.hstack((hue_sin,hue_cos)))
                 print('\tDBSCAN Durchgang %s' % durchg)
                 durchg += 1
 
@@ -364,6 +399,9 @@ class Farben(object):
 
                 if epsilon < 0:
                     break
+            '''
+
+            db = DBSCAN(eps=0.05,min_samples=0).fit(np.hstack((hue_sin,hue_cos)))
 
             labels = set(db.labels_[db.labels_ != -1])
 
@@ -537,12 +575,12 @@ def normpop(nparray):
 
 
 if __name__ == '__main__':
-    os.system('rm paletten/*')
+    os.system('rm -rf paletten/*')
     fn = 'samples/bild16.jpg'
 
     # os.system('eog %s' % fn)
     print('Starte Programm')
-    vibrant = VibrantPy(fn,r=200)
+    vibrant = VibrantPy(fn,r=800)
 
     farben_tot = vibrant.farben_tot
     # farben_tot = farben_tot[farben_tot[:,3] > 1]
