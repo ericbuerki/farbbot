@@ -1,50 +1,54 @@
-#!/usr/bin/python3
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 import os
 
 import numpy as np
 from PIL import Image
-import matplotlib.pyplot as plt
 
 from skimage import color
 from sklearn.cluster import DBSCAN,AffinityPropagation
 
 from palette import Bild
+import helpers as h
 
-np.set_printoptions(precision=1,edgeitems=7,suppress=True)
-farbnamen = ['Vibrant','Muted','DarkVibrant',
-             'DarkMuted','LightVibrant','LightMuted']
-farbnamen_alt = ['Vibrant','DarkVibrant','LightVibrant',
-                 'Muted','DarkMuted','LightMuted']
+np.set_printoptions(precision=1, edgeitems=7, suppress=True)
+farbnamen = ['Vibrant', 'Muted', 'DarkVibrant',             # Eigentliche Reihenfolge
+             'DarkMuted', 'LightVibrant', 'LightMuted']
+farbnamen_alt = ['Vibrant', 'DarkVibrant', 'LightVibrant',  # Interne Reihenfolge
+                 'Muted', 'DarkMuted', 'LightMuted']
 
 
 class VibrantPy(object):
-    def __init__(self,filename,r=200,k=64):
+    def __init__(self, filename, r=200, k=64):
 
         # Objektvariabeln
         self.farben = []
         # Python-Liste, die alle Farbbehälter(Farben()) enthält.
-        # Reihenfolge der Farben gemäss farbnamen
+        # Reihenfolge der Farben gemäss farbnamen_alt
 
-        self.farben_len = np.empty(6,dtype='uint8')
+        self.farben_len = np.empty(6, dtype='uint8')
         # np-Array, Anzahl Farben der Farbbbehälter enthaltend.
         # Reihenfolge gemäss farbnamen_alt
 
-        self.sort_ind = np.zeros((2,3),dtype='uint8')
-        # zweidimensionaler np-Array, die
+        self.sort_ind = np.zeros((2, 3), dtype='uint8')
+        # zweidimensionaler np-Array
+        # enthält die Sortierindizes von self.farben
 
-        self.farben_final = np.zeros((6,10), dtype='float32')
+        self.farben_final = np.zeros((6, 10), dtype='float32')
+        # np-Array, der die finalen Farben enthält.
+        # Bereit für die Ausgabe als palette
 
+        self.farben_final_used = np.zeros(6, dtype='bool')
+        # np.Array. True, falls Farbe schon in self.farben_final
+        # Reihenfolge wie self.farben_final
 
         print('VibrantPy\nQuantisiere %s' % filename)
-
         bild = Image.open(filename)
         if r:
-            bild.thumbnail((r,r))
+            bild.thumbnail((r, r))
 
         farben_raw = bild.getcolors(maxcolors=255 ** 3)
-        farben_tmp = np.zeros((len(farben_raw),10),dtype='float32')
+        farben_tmp = np.zeros((len(farben_raw), 10), dtype='float32')
 
         # 0:    Hue
         # 1:    Saturation
@@ -63,38 +67,29 @@ class VibrantPy(object):
             farben_tmp[row,4:7] = farbe[1]
             row += 1
 
-        farben_tmp[:,3] /= normpop(farben_tmp[:,3])
+        farben_tmp[:,3] /= h.normpop(farben_tmp[:,3])
         farben_tmp[:,3] *= 255
 
-        create_hist(farben_tmp[:,3],'Pop nach farben.__init__',bins=200)
+        h.create_hist(farben_tmp[:,3], 'Pop nach farben.__init__', bins=200)
 
         alle = Farben(farben_tmp,6)
         self.farben_tot = alle.farben
 
-        create_hist(self.farben_tot[:,3],'Pop nach DBSCAN',bins=10)
+        h.create_hist(self.farben_tot[:,3], 'Pop nach DBSCAN', bins=10)
 
         # 0-2:  *Vibrant
         # 3-5:  *Muted
         for i in range(3):  # Vibrant
-            self.farben.append(Farben(self.farben_tot,i * 2))
+            self.farben.append(Farben(self.farben_tot, i * 2))
             # self.farben_len[i] = len(self.farben[i])
         for i in range(3):  # Muted
-            self.farben.append(Farben(self.farben_tot,i * 2 + 1))
+            self.farben.append(Farben(self.farben_tot, i * 2 + 1))
             # self.farben_len[i + 3] = len(self.farben[i + 3])
 
         # Entferne Duplikate
         self.ddwrap()
 
         self.sort()
-        print('self.sort_ind')
-        # print(self.sort_ind)
-        for ind_anz in zip(farbnamen_alt, self.farben_len, self.sort_ind):
-            print('Farbe: %s\nAnzahl Farben: %s\nSort.Ind.: %s\n\n' % ind_anz)
-        # TODO: self.sort_ind in zweidimensionalen Array umwandeln.
-        # Und anschliessend finale Farben der Länge nach auswählen.
-
-        # Wählt die Endgültigen Farben aus.
-        # Definiert self.farben_final (np.array (6,10), dtype='float32')
         self.select_final()
 
         for farbe in self.farben:
@@ -120,15 +115,17 @@ class VibrantPy(object):
         self.farben_len = np.empty(6,dtype='uint8')
         for i in range(6):
             self.farben_len[i] = len(self.farben[i])
-            #print('%s, Länge %s' % (farbnamen_alt[i], self.farben_len[i]))
+            # print('%s, Länge %s' % (farbnamen_alt[i], self.farben_len[i]))
 
         # self.sort enthält die Indizes für self.farben()
         self.sort_ind = np.zeros((2,3),dtype='uint8')
         self.sort_ind[0] = self.farben_len[:3].argsort()  # Vibrant
         self.sort_ind[1] = self.farben_len[3:].argsort() + 3  # Muted
+        '''
         print('Sortierindizes')
         print('Vibrant\t%s' % str(self.sort_ind[0]))
         print('Muted\t%s' % str(self.sort_ind[1]))
+        '''
 
     def ddwrap(self):
         # Führt self.deldup() in Farben aus
@@ -139,11 +136,65 @@ class VibrantPy(object):
 
     def select_final(self):
         self.sort()
+
+        # Vibrant
+
         if len(np.unique(self.farben_len[:3])) is not len(self.farben_len[:3]):
-            print('Mehrere Farbbehälter sind gleich gross. Noch nicht implementiert.')
+            # 'Mehrere Farbbehälter sind gleich gross.
+            print('Mehrere Farbbehälter sind gleich gross.')
+            print('np.unique(self.farben_len[:3])')
+            print(np.unique(self.farben_len[:3]))
+            print('self.farben_len[:3]')
+            print(self.farben_len[:3])
+
+            cond = self.farben_len[:3] == self.farben_len[self.sort_ind[0,0]]
+            if np.count_nonzero(cond) is 2:
+                # Die ersten beiden Farbbehälter sind gleich lang
+                print('die Ersten beiden Farbbehälter sind gleich lang')
+                self.get_better(0, [0, 1])
+
         else:
-            #if self.farben[self.sort_ind[0,0]]
-            pass
+            # Alle Farbbehälter sind verschieden lang (Glück gehabt)
+            print('Alle Farbbehälter sind verschieden lang')
+            # if self.farben[self.sort_ind[0,0]]
+
+            self.farben[self.sort_ind[0,0]].target(enable_delta=True)
+            farben_tmp = self.farben[self.sort_ind[0,0]].farben
+            cond0 = farben_tmp[:,3].argmax()
+            self.farben_final[self.sort_ind[0,0]] = farben_tmp[cond0]
+            self.farben_final_used[self.sort_ind[0,0]] = True
+
+            self.farben[self.sort_ind[0,1]].target(enable_delta=True)
+            farben_tmp = self.farben[self.sort_ind[0,1]].farben
+            cond0 = farben_tmp[:,3].argmax()
+            self.farben_final[self.sort_ind[0,1]] = farben_tmp[cond0]
+            self.farben_final_used[self.sort_ind[0,1]] = True
+
+        # Muted
+
+        print(self.farben_final[self.farben_final_used])
+
+    def get_best(self, vm, si):
+        pass
+
+    def get_better(self, vm, si):
+        # vm:   Vibrant(0)/Muted(1)
+        # si:   Sortierindizes
+        si = np.array(si)
+
+        if vm is 0:
+            print('Vibrant\t%s' % str(si))
+        else:
+            print('Muted\t%s' % str(si))
+            #si += 3
+
+        delta_tmp = []
+        for i in si:
+            self.farben[self.sort_ind[vm,i]].target(enable_delta=True)
+            delta_tmp.append(self.farben[self.sort_ind[vm,i]].delta.tolist())
+
+        print('delta_tmp')
+        print(delta_tmp)
 
     def get_farben(self):
         return self.farben_list
@@ -153,15 +204,24 @@ class VibrantPy(object):
 
 
 class Farben(object):
-    def __init__(self,_farben,modus=6,rec=False):
+    def __init__(self, _farben, modus=6, rec=False):
         self.modus = modus
-        self.farben = _farben
-        self.rec = rec  # ob rekursiv oder nicht
+        # Farbmodus. Zahl gemäss Index in farbnamen
+        #       -1:   Manuell
+        #       0-5:  Farbnamen
+        #       6:    Alle
+        #       7:    (beinahe) Fertig (für self.target(delta))
 
-        # -1:   Manuell
-        # 0-5:  Farbnamen
-        # 6:    Alle
-        # 7:    (beinahe) Fertig (für self.target(delta))
+        self.farben = _farben
+        # Inputfarben als np.array mit der Form (-1,10)
+
+        self.rec = rec
+        # ob rekursiv oder nicht
+
+        self.delta = None
+        # np-array, der die gewichtete Abweichung zu den target-Werten
+        # enthält. Wird durch self.target(enable_delta=True) definiert.
+
         if 0 <= self.modus < 6:
             if self.rec:
                 # print(self.farben)
@@ -375,17 +435,15 @@ class Farben(object):
             self.farben = np.unique(self.farben,axis=0)
 
         if mode == 'db_hue':
-            print('Farben.cluster(\'db_hue\') %s' % farbnamen[self.modus])
-
             hue_sin = np.sin((self.farben[:,0] / 360) * 2 * np.pi)  # -> x
             hue_sin = hue_sin.reshape((-1,1))
             hue_cos = np.cos((self.farben[:,0] / 360) * 2 * np.pi)  # -> y
             hue_cos = hue_cos.reshape((-1,1))
 
-            durchg = 0  # Zähler für durchgänge
-            epsilon = 0.5  # Epsilon am anfang (ursprüngl: 0.05
-
             '''
+            durchg = 0  # Zähler für durchgänge
+            epsilon = 0.5  # Epsilon am anfang (ursprüngl: 0.05)
+
             while True:
 
                 db = DBSCAN(eps=epsilon,min_samples=0).fit(np.hstack((hue_sin,hue_cos)))
@@ -409,19 +467,14 @@ class Farben(object):
             keep_tmp = np.ones(len(labels),dtype='bool')
 
             for i in labels:
-                print('\tLabel %s, Farben %s ' % (i,len(self.farben[db.labels_ == i])))
                 f_tmp = Farben(self.farben[db.labels_ == i],modus=self.modus,rec=True)
                 if len(f_tmp.farben.shape) == 1:
                     farben_tmp[i] = f_tmp.farben
                 else:
                     keep_tmp[i] = False
 
-            print('Reduktionsfaktor: %0.2f %%' % (
-                    (len(labels) / self.farben.shape[0]) * 100))
-
             self.farben = farben_tmp[keep_tmp]
             self.recomp('rgb',['hsv','lab'])
-            print('-' * 20)
 
         if mode == 'init':
             print('clustere Bild,\tmodus=%s' % mode)
@@ -455,7 +508,7 @@ class Farben(object):
                 farben_tmp[i] = f_tmp
                 farben_tmp[i,3] = pop
 
-            farben_tmp[:,3] = normpop(farben_tmp[:,3])
+            farben_tmp[:,3] = h.normpop(farben_tmp[:,3])
             farben_tmp[:,3] *= 255
 
             print('Farben.cluster(\'init\')')
@@ -466,7 +519,7 @@ class Farben(object):
             self.recomp('rgb',['hsv','lab'])
             self.farben = self.farben[self.farben[:,3].argsort()][::-1]
 
-    def target(self,enable_delta=False):
+    def target(self, enable_delta=False):
         # Wählt passendste Farbe aus
         # Werte übernommen von vibrant.js
         target_dark_luma = 67
@@ -478,6 +531,9 @@ class Farben(object):
         wl = 6  # Gewichtung des Lumas
         ws = 3  # Gewichtung der Sättigung
         wp = 1  # Gewichtung der Häufigkeit
+
+        if enable_delta:
+            wp = 0
 
         if self.rec:
             wl = 0
@@ -503,7 +559,8 @@ class Farben(object):
             target0 = np.abs(self.farben[:,2] - target_light_luma)
             target1 = np.abs(self.farben[:,1] - target_muted_saturation)
 
-        target2 = np.abs(self.farben[:,3] - 255)
+        # target2 = np.abs(self.farben[:,3] - 255)
+        target2 = np.abs(self.farben[:,3] - np.max(self.farben[:,3])) * 255
 
         delta = (target0 * wl + target1 * ws + target2 * wp) / 3
         target = delta.argsort()
@@ -511,8 +568,10 @@ class Farben(object):
         if self.rec:
             target = target[0]
         if enable_delta:
+            print('self.rec ist %s' % self.rec)
             self.delta = delta
 
+        # self.farben = self.farben[target]
         self.farben = self.farben[target]
         # print('self.target() in self.farben')
         # print(self.farben)
@@ -552,35 +611,13 @@ class Farben(object):
             return 'leer'
 
 
-def create_hist(onedarray,title,bins=20):
-    plt.hist(onedarray,bins=bins)
-    if title:
-        plt.title(title)
-    else:
-        plt.title('Histogramm')
-    plt.xlabel('Wert')
-    plt.ylabel('Häufigkeit')
-    _fn = 'plots/%s.png' % title.replace(' ','_')
-    plt.savefig(_fn)
-
-
-def normpop(nparray):
-    # normalisiert Häufigkeitswerte und wendet 1-(1-x)¹⁰
-    pop_tmp = nparray / nparray.sum()
-    pop_tmp = 1 - (1 - pop_tmp) ** 10
-    print('Max:\t%s' % pop_tmp.max())
-    print('Min:\t%s' % pop_tmp.min())
-    print('Sum:\t%s' % pop_tmp.sum())
-    return pop_tmp
-
-
 if __name__ == '__main__':
     os.system('rm -rf paletten/*')
-    fn = 'samples/bild16.jpg'
+    fn = 'samples/bild01.jpg'
 
     # os.system('eog %s' % fn)
     print('Starte Programm')
-    vibrant = VibrantPy(fn,r=800)
+    vibrant = VibrantPy(fn, r=800)
 
     farben_tot = vibrant.farben_tot
     # farben_tot = farben_tot[farben_tot[:,3] > 1]
