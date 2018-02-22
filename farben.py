@@ -158,17 +158,33 @@ class VibrantPy(object):
             print('Alle Farbbehälter sind verschieden lang')
             # if self.farben[self.sort_ind[0,0]]
 
+            # Farbe 1
             self.farben[self.sort_ind[0,0]].target(enable_delta=True)
             farben_tmp = self.farben[self.sort_ind[0,0]].farben
             cond0 = farben_tmp[:,3].argmax()
             self.farben_final[self.sort_ind[0,0]] = farben_tmp[cond0]
             self.farben_final_used[self.sort_ind[0,0]] = True
 
+            # Farbe 2
             self.farben[self.sort_ind[0,1]].target(enable_delta=True)
             farben_tmp = self.farben[self.sort_ind[0,1]].farben
-            cond0 = farben_tmp[:,3].argmax()
-            self.farben_final[self.sort_ind[0,1]] = farben_tmp[cond0]
+            wdist = h.winkeldist(self.farben_final[self.farben_final_used][0,0],
+                                 farben_tmp[:,0])
+            cond1 = (wdist + farben_tmp[:,3] * 180).argmax()
+            self.farben_final[self.sort_ind[0,1]] = farben_tmp[cond1]
             self.farben_final_used[self.sort_ind[0,1]] = True
+
+            # Farbe 3
+            self.farben[self.sort_ind[0,2]].target(enable_delta=True)
+            farben_tmp = self.farben[self.sort_ind[0,2]].farben
+            wm_temp = h.wmittel(self.farben_final[self.farben_final_used][:,0])
+            wdist = h.winkeldist(wm_temp, farben_tmp[:,0])
+
+            cond2 = (wdist + farben_tmp[:,3] * 180).argmax()
+
+            self.farben_final[self.sort_ind[0,2]] = farben_tmp[cond2]
+            self.farben_final_used[self.sort_ind[0,2]] = True
+
 
         # Muted
 
@@ -512,8 +528,6 @@ class Farben(object):
             farben_tmp[:,3] *= 255
 
             print('Farben.cluster(\'init\')')
-            print('Reduktionsfaktor: %0.2f %%' % (
-                    (farben_tmp.shape[0] / self.farben.shape[0]) * 100))
 
             self.farben = farben_tmp
             self.recomp('rgb',['hsv','lab'])
@@ -568,7 +582,6 @@ class Farben(object):
         if self.rec:
             target = target[0]
         if enable_delta:
-            print('self.rec ist %s' % self.rec)
             self.delta = delta
 
         # self.farben = self.farben[target]
@@ -586,9 +599,7 @@ class Farben(object):
 
         for i in range(self.farben.shape[0]):
             for j in range(farben_comp.shape[0]):
-                # print('i: %s   j: %s' % (i,j))
                 if np.all(self.farben[i] == farben_comp[j]):
-                    print('\t\tBingo!')
                     keep[i] = False
 
         self.farben = self.farben[keep]
@@ -613,7 +624,7 @@ class Farben(object):
 
 if __name__ == '__main__':
     os.system('rm -rf paletten/*')
-    fn = 'samples/bild01.jpg'
+    fn = 'samples/bild03.jpg'
 
     # os.system('eog %s' % fn)
     print('Starte Programm')
