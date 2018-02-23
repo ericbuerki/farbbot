@@ -137,10 +137,12 @@ class VibrantPy(object):
     def select_final(self):
         self.sort()
 
-        # Vibrant
-
+        print('\tWähle die endgültigen Farben aus.')
+        print('#1\t Vibrant\n')
         if len(np.unique(self.farben_len[:3])) is not len(self.farben_len[:3]):
+
             # 'Mehrere Farbbehälter sind gleich gross.
+
             print('Mehrere Farbbehälter sind gleich gross.')
             print('np.unique(self.farben_len[:3])')
             print(np.unique(self.farben_len[:3]))
@@ -154,41 +156,81 @@ class VibrantPy(object):
                 self.get_better(0, [0, 1])
 
         else:
+
             # Alle Farbbehälter sind verschieden lang (Glück gehabt)
             print('Alle Farbbehälter sind verschieden lang')
             # if self.farben[self.sort_ind[0,0]]
 
-            # Farbe 1
+            # Vibrant
+
+            # Farbe 0
             self.farben[self.sort_ind[0,0]].target(enable_delta=True)
             farben_tmp = self.farben[self.sort_ind[0,0]].farben
-            cond0 = farben_tmp[:,3].argmax()
-            self.farben_final[self.sort_ind[0,0]] = farben_tmp[cond0]
+            cond = farben_tmp[:,3].argmax()
+            self.farben_final[self.sort_ind[0,0]] = farben_tmp[cond]
             self.farben_final_used[self.sort_ind[0,0]] = True
 
-            # Farbe 2
+            # Farbe 1
             self.farben[self.sort_ind[0,1]].target(enable_delta=True)
             farben_tmp = self.farben[self.sort_ind[0,1]].farben
             wdist = h.winkeldist(self.farben_final[self.farben_final_used][0,0],
                                  farben_tmp[:,0])
-            cond1 = (wdist + farben_tmp[:,3] * 180).argmax()
-            self.farben_final[self.sort_ind[0,1]] = farben_tmp[cond1]
+            cond = (wdist + farben_tmp[:,3] * 180).argmax()
+            self.farben_final[self.sort_ind[0,1]] = farben_tmp[cond]
             self.farben_final_used[self.sort_ind[0,1]] = True
 
-            # Farbe 3
+            # Farbe 2
             self.farben[self.sort_ind[0,2]].target(enable_delta=True)
             farben_tmp = self.farben[self.sort_ind[0,2]].farben
             wm_temp = h.wmittel(self.farben_final[self.farben_final_used][:,0])
             wdist = h.winkeldist(wm_temp, farben_tmp[:,0])
-
-            cond2 = (wdist + farben_tmp[:,3] * 180).argmax()
-
-            self.farben_final[self.sort_ind[0,2]] = farben_tmp[cond2]
+            cond = (wdist + farben_tmp[:,3] * 180).argmax()
+            self.farben_final[self.sort_ind[0,2]] = farben_tmp[cond]
             self.farben_final_used[self.sort_ind[0,2]] = True
 
+        print('#1\t Muted\n')
+        # if len(np.unique(self.farben_len[3:])) is not len(self.farben_len[3:]):
+        if False:
+            print('Mehrere Farbbehälter sind gleich gross.')
+            print(self.farben_len[3:])
+            print(self.sort_ind[1])
 
-        # Muted
+        else:
 
-        print(self.farben_final[self.farben_final_used])
+            print('Alle Farbbehälter verschieden Lang. Glück gehabt.')
+
+            # Muted
+
+            # Farbe 0
+            self.farben[self.sort_ind[1,0]].target(enable_delta=True)
+            farben_tmp = self.farben[self.sort_ind[1,0]].farben
+            cond = farben_tmp[:,3].argmax()
+            self.farben_final[self.sort_ind[1,0]] = farben_tmp[cond]
+            self.farben_final_used[self.sort_ind[1,0]] = True
+
+            # Farbe 1
+            self.farben[self.sort_ind[1,1]].target(enable_delta=True)
+            farben_tmp = self.farben[self.sort_ind[1,1]].farben
+            wdist = h.winkeldist(self.farben_final[self.sort_ind[1,0]][0],
+                                 farben_tmp[:,0])
+            cond = (wdist + farben_tmp[:,3] * 180).argmax()
+            self.farben_final[self.sort_ind[1,1]] = farben_tmp[cond]
+            self.farben_final_used[self.sort_ind[1,1]] = True
+
+            # Farbe 2
+            self.farben[self.sort_ind[1,2]].target(enable_delta=True)
+            farben_tmp = self.farben[self.sort_ind[1,2]].farben
+            wm_temp = h.wmittel(self.farben_final[self.sort_ind[1,[0,1]]][:,0])
+            wdist = h.winkeldist(wm_temp, farben_tmp[:,0])
+            cond = (wdist + farben_tmp[:,3] * 180).argmax()
+            self.farben_final[self.sort_ind[1,2]] = farben_tmp[cond]
+            self.farben_final_used[self.sort_ind[1,2]] = True
+
+
+
+
+        # print(self.farben_final[self.farben_final_used])
+        print(self.farben_final)
 
     def get_best(self, vm, si):
         pass
@@ -634,6 +676,7 @@ if __name__ == '__main__':
     # farben_tot = farben_tot[farben_tot[:,3] > 1]
     farben_tot = farben_tot[farben_tot[:,0].argsort()]
     farben_list = vibrant.farben_list
+    farben_final = vibrant.farben_final
 
     f_count = 0
     for farben in farben_list:
@@ -659,5 +702,12 @@ if __name__ == '__main__':
     palette = Bild(fn,None,np.uint8(farben_tot[:,4:7]),
                    debug=True,pop=farben_tot[:,3])
     palette.erstelle_palette()
+
+    fn_temp = os.path.splitext(fn)
+    fn_final = '%s_7_Final%s' % (fn_temp[0],fn_temp[1])
+    palette = Bild(fn_final,None,np.uint8(farben_final[:,4:7]),
+                   debug=True,pop=farben_final[:,3])
+    palette.erstelle_palette()
+
     fn_temp_np = 'farben/%s_Palette.csv' % f_count
     np.savetxt(fn_temp_np,farben_tot,delimiter=',')
