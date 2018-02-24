@@ -130,13 +130,16 @@ class VibrantPy(object):
     def ddwrap(self):
         # Führt self.deldup() in Farben aus
         self.sort()
+        '''
         for i in range(2):
             self.farben[self.sort_ind[0,i+1]].deldup(self.farben[self.sort_ind[0,i]].farben)
             self.farben[self.sort_ind[1,i+1]].deldup(self.farben[self.sort_ind[1,i]].farben)
+        '''
 
     def select_final(self):
         self.sort()
 
+        '''
         print('\tWähle die endgültigen Farben aus.')
         print('#1\t Vibrant\n')
         if len(np.unique(self.farben_len[:3])) is not len(self.farben_len[:3]):
@@ -161,33 +164,36 @@ class VibrantPy(object):
             print('Alle Farbbehälter sind verschieden lang')
             # if self.farben[self.sort_ind[0,0]]
 
-            # Vibrant
+        '''
 
-            # Farbe 0
-            self.farben[self.sort_ind[0,0]].target(enable_delta=True)
-            farben_tmp = self.farben[self.sort_ind[0,0]].farben
-            cond = farben_tmp[:,3].argmax()
-            self.farben_final[self.sort_ind[0,0]] = farben_tmp[cond]
-            self.farben_final_used[self.sort_ind[0,0]] = True
+        # Vibrant
 
-            # Farbe 1
-            self.farben[self.sort_ind[0,1]].target(enable_delta=True)
-            farben_tmp = self.farben[self.sort_ind[0,1]].farben
-            wdist = h.winkeldist(self.farben_final[self.farben_final_used][0,0],
-                                 farben_tmp[:,0])
-            cond = (wdist + farben_tmp[:,3] * 180).argmax()
-            self.farben_final[self.sort_ind[0,1]] = farben_tmp[cond]
-            self.farben_final_used[self.sort_ind[0,1]] = True
+        # Farbe 0
+        self.farben[self.sort_ind[0,0]].target(enable_delta=True)
+        farben_tmp = self.farben[self.sort_ind[0,0]].farben
+        cond = farben_tmp[:,3].argmax()
+        self.farben_final[self.sort_ind[0,0]] = farben_tmp[cond]
+        self.farben_final_used[self.sort_ind[0,0]] = True
 
-            # Farbe 2
-            self.farben[self.sort_ind[0,2]].target(enable_delta=True)
-            farben_tmp = self.farben[self.sort_ind[0,2]].farben
-            wm_temp = h.wmittel(self.farben_final[self.farben_final_used][:,0])
-            wdist = h.winkeldist(wm_temp, farben_tmp[:,0])
-            cond = (wdist + farben_tmp[:,3] * 180).argmax()
-            self.farben_final[self.sort_ind[0,2]] = farben_tmp[cond]
-            self.farben_final_used[self.sort_ind[0,2]] = True
+        # Farbe 1
+        self.farben[self.sort_ind[0,1]].target(enable_delta=True)
+        farben_tmp = self.farben[self.sort_ind[0,1]].farben
+        wdist = h.winkeldist(self.farben_final[self.farben_final_used][0,0],
+                             farben_tmp[:,0])
+        cond = (wdist + farben_tmp[:,3] * 180).argmax()
+        self.farben_final[self.sort_ind[0,1]] = farben_tmp[cond]
+        self.farben_final_used[self.sort_ind[0,1]] = True
 
+        # Farbe 2
+        self.farben[self.sort_ind[0,2]].target(enable_delta=True)
+        farben_tmp = self.farben[self.sort_ind[0,2]].farben
+        wm_temp = h.wmittel(self.farben_final[self.farben_final_used][:,0])
+        wdist = h.winkeldist(wm_temp, farben_tmp[:,0])
+        cond = (wdist + farben_tmp[:,3] * 180).argmax()
+        self.farben_final[self.sort_ind[0,2]] = farben_tmp[cond]
+        self.farben_final_used[self.sort_ind[0,2]] = True
+
+        '''
         print('#1\t Muted\n')
         # if len(np.unique(self.farben_len[3:])) is not len(self.farben_len[3:]):
         if False:
@@ -199,32 +205,34 @@ class VibrantPy(object):
 
             print('Alle Farbbehälter verschieden Lang. Glück gehabt.')
 
-            # Muted
+        '''
 
-            # Farbe 0
-            self.farben[self.sort_ind[1,0]].target(enable_delta=True)
-            farben_tmp = self.farben[self.sort_ind[1,0]].farben
-            cond = farben_tmp[:,3].argmax()
-            self.farben_final[self.sort_ind[1,0]] = farben_tmp[cond]
-            self.farben_final_used[self.sort_ind[1,0]] = True
+        # Muted
 
-            # Farbe 1
-            self.farben[self.sort_ind[1,1]].target(enable_delta=True)
-            farben_tmp = self.farben[self.sort_ind[1,1]].farben
-            wdist = h.winkeldist(self.farben_final[self.sort_ind[1,0]][0],
-                                 farben_tmp[:,0])
-            cond = (wdist + farben_tmp[:,3] * 180).argmax()
-            self.farben_final[self.sort_ind[1,1]] = farben_tmp[cond]
-            self.farben_final_used[self.sort_ind[1,1]] = True
+        # Farbe 0
+        self.farben[self.sort_ind[1,0]].target(enable_delta=True)
+        farben_tmp = self.farben[self.sort_ind[1,0]].farben
+        cond = farben_tmp[:,3].argmax()
+        self.farben_final[self.sort_ind[1,0]] = farben_tmp[cond]
+        self.farben_final_used[self.sort_ind[1,0]] = True
 
-            # Farbe 2
-            self.farben[self.sort_ind[1,2]].target(enable_delta=True)
-            farben_tmp = self.farben[self.sort_ind[1,2]].farben
-            wm_temp = h.wmittel(self.farben_final[self.sort_ind[1,[0,1]]][:,0])
-            wdist = h.winkeldist(wm_temp, farben_tmp[:,0])
-            cond = (wdist + farben_tmp[:,3] * 180).argmax()
-            self.farben_final[self.sort_ind[1,2]] = farben_tmp[cond]
-            self.farben_final_used[self.sort_ind[1,2]] = True
+        # Farbe 1
+        self.farben[self.sort_ind[1,1]].target(enable_delta=True)
+        farben_tmp = self.farben[self.sort_ind[1,1]].farben
+        wdist = h.winkeldist(self.farben_final[self.sort_ind[1,0]][0],
+                             farben_tmp[:,0])
+        cond = (wdist + farben_tmp[:,3] * 180).argmax()
+        self.farben_final[self.sort_ind[1,1]] = farben_tmp[cond]
+        self.farben_final_used[self.sort_ind[1,1]] = True
+
+        # Farbe 2
+        self.farben[self.sort_ind[1,2]].target(enable_delta=True)
+        farben_tmp = self.farben[self.sort_ind[1,2]].farben
+        wm_temp = h.wmittel(self.farben_final[self.sort_ind[1,[0,1]]][:,0])
+        wdist = h.winkeldist(wm_temp, farben_tmp[:,0])
+        cond = (wdist + farben_tmp[:,3] * 180).argmax()
+        self.farben_final[self.sort_ind[1,2]] = farben_tmp[cond]
+        self.farben_final_used[self.sort_ind[1,2]] = True
 
 
 
@@ -289,10 +297,11 @@ class Farben(object):
                 self.cluster('db_hue')
             # self.target()
         if self.modus == 6:
+            # self.recomp('rgb',['hsv','lab'])
+            # self.cluster('init')
+            # self.purge_irrelevant()
+            self.quantize(k=255)
             self.recomp('rgb',['hsv','lab'])
-            self.cluster('init')
-            self.purge_irrelevant()
-            # self.quantize(k=128)
         if self.rec:
             self.target()
 
@@ -442,14 +451,14 @@ class Farben(object):
         # Wählt passende Farbe aus
         # Werte übernommen von vibrant.js
 
-        max_dark_luma = 115  # 115
-        min_light_luma = 141  # 141
+        max_dark_luma = 115             # 115
+        min_light_luma = 141            # 141
 
-        min_normal_luma = 77  # 77
-        max_normal_luma = 179
+        min_normal_luma = 77            # 77
+        max_normal_luma = 179           # 179
 
-        max_muted_saturation = 102
-        min_vibrant_saturation = 90
+        max_muted_saturation = 102      # 102
+        min_vibrant_saturation = 90     # 90
 
         if self.modus == 0:  # Vibrant
             bedingung = np.logical_and(self.farben[:,2] > min_normal_luma,
@@ -476,11 +485,13 @@ class Farben(object):
 
         self.farben = self.farben[bedingung]
 
+        '''
         only_pop = self.farben[:,3] > 5
         if np.any(only_pop):
             noise = (np.sum(~only_pop) / len(only_pop)) * 100
             # print('Rauschen: %.2f%%' % noise)
             self.farben = self.farben[only_pop]
+        '''
 
     def cluster(self,mode='af'):
         if mode == 'af':
@@ -498,7 +509,6 @@ class Farben(object):
             hue_cos = np.cos((self.farben[:,0] / 360) * 2 * np.pi)  # -> y
             hue_cos = hue_cos.reshape((-1,1))
 
-            '''
             durchg = 0  # Zähler für durchgänge
             epsilon = 0.5  # Epsilon am anfang (ursprüngl: 0.05)
 
@@ -515,9 +525,8 @@ class Farben(object):
 
                 if epsilon < 0:
                     break
-            '''
 
-            db = DBSCAN(eps=0.05,min_samples=0).fit(np.hstack((hue_sin,hue_cos)))
+            db = DBSCAN(eps=0.05, min_samples=0).fit(np.hstack((hue_sin, hue_cos)))
 
             labels = set(db.labels_[db.labels_ != -1])
 
@@ -525,11 +534,14 @@ class Farben(object):
             keep_tmp = np.ones(len(labels),dtype='bool')
 
             for i in labels:
-                f_tmp = Farben(self.farben[db.labels_ == i],modus=self.modus,rec=True)
+                '''
+                f_tmp = Farben(self.farben[db.labels_ == i], modus=self.modus, rec=True)
                 if len(f_tmp.farben.shape) == 1:
                     farben_tmp[i] = f_tmp.farben
                 else:
                     keep_tmp[i] = False
+                '''
+                farben_tmp[i] = h.weightedmean(self.farben[db.labels_ == i])
 
             self.farben = farben_tmp[keep_tmp]
             self.recomp('rgb',['hsv','lab'])
@@ -591,10 +603,12 @@ class Farben(object):
         if enable_delta:
             wp = 0
 
+        '''
         if self.rec:
             wl = 0
             ws = 1
             wp = 2
+        '''
 
         if self.modus == 0:  # Vibrant
             target0 = np.abs(self.farben[:,2] - target_normal_luma)

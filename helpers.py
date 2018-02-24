@@ -65,6 +65,17 @@ def wmittel(nparray):
         return (nparray[0] + w_dist/2) % 360
 
 
+def weightedmean(farben):
+    total_pop = np.sum(farben[:,3])
+    # farben_weighted = np.multiply(farben[:,4:7], farben[:,3])
+    farben_weighted = farben[:,4:7] * farben[:,3][...,None]
+
+    farbe_final = np.empty(10, dtype='float32')
+    farbe_final[4:7] = np.sum(farben_weighted, axis=0)
+    farbe_final[4:7] /= total_pop
+    farbe_final[3] = np.mean(farben[:,3])
+    return farbe_final
+
 
 if __name__ == '__main__':
     a = np.random.randint(0,360)
