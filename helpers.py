@@ -3,6 +3,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+np.set_printoptions(precision=1, edgeitems=7, suppress=True)
+
 
 def create_hist(onedarray,title,bins=20):
     plt.hist(onedarray,bins=bins)
@@ -35,8 +37,8 @@ def winkeldist(winkel0, winkel1, ret_ind=False):
 
     winkel_tmp = np.zeros((len(winkel1), 3), dtype='float32')
 
-    print('winkel0: %s' % winkel0)
-    print('winkel1: %s' % winkel1)
+    # print('winkel0: %s' % winkel0)
+    # print('winkel1: %s' % winkel1)
 
     winkel_tmp[:,0] = np.abs(winkel0 - winkel1)     # 0
     winkel_tmp[:,1] = (360 - winkel1) + winkel0     # 1
@@ -69,11 +71,12 @@ def weightedmean(farben):
     total_pop = np.sum(farben[:,3])
     # farben_weighted = np.multiply(farben[:,4:7], farben[:,3])
     farben_weighted = farben[:,4:7] * farben[:,3][...,None]
-
-    farbe_final = np.empty(10, dtype='float32')
-    farbe_final[4:7] = np.sum(farben_weighted, axis=0)
+    farbe_final = np.zeros(10, dtype='float32')
+    f_temp = np.sum(farben_weighted, axis=0)
+    farbe_final[4:7] = f_temp
     farbe_final[4:7] /= total_pop
     farbe_final[3] = np.mean(farben[:,3])
+    farbe_final[3] *= (1.05 ** farben.shape[0])
     return farbe_final
 
 

@@ -273,10 +273,11 @@ class Farben(object):
     def __init__(self, _farben, modus=6, rec=False):
         self.modus = modus
         # Farbmodus. Zahl gemäss Index in farbnamen
-        #       -1:   Manuell
-        #       0-5:  Farbnamen
-        #       6:    Alle
-        #       7:    (beinahe) Fertig (für self.target(delta))
+        #      -1:  Manuell
+        #     0-5:  Farbnamen
+        #       6:  Alle
+        #       7:  (beinahe) Fertig (für self.target(delta))
+        #       8:  Fertig
 
         self.farben = _farben
         # Inputfarben als np.array mit der Form (-1,10)
@@ -300,28 +301,19 @@ class Farben(object):
             # self.recomp('rgb',['hsv','lab'])
             # self.cluster('init')
             # self.purge_irrelevant()
-            self.quantize(k=255)
+            self.quantize(k=64)
             self.recomp('rgb',['hsv','lab'])
+        if self.modus == 8:
+            if self.farben.shape[0] != 6:
+                raise ValueError('Farbbehälter im Modus 8 erwartet 6 Farben.\n'
+                                 'Erhielt nur %s' % self.farben.shape[0])
+            self.finalize()
+
         if self.rec:
             self.target()
 
     def __len__(self):
         return self.farben.shape[0]
-
-    def __lt__(self,other):
-        return self.farben.shape[0] < other
-
-    def __le__(self,other):
-        return self.farben.shape[0] <= other
-
-    def __eq__(self,other):
-        return self.farben.shape[0] == other
-
-    def __gt__(self,other):
-        return self.farben.shape[0] > other
-
-    def __ge__(self,other):
-        return self.farben.shape[0] >= other
 
     def __bool__(self):
         # True, falls Farben in Objekt, ansonsten False
@@ -494,6 +486,9 @@ class Farben(object):
         '''
 
     def cluster(self,mode='af'):
+
+        print(farbnamen[self.modus])
+
         if mode == 'af':
             af = AffinityPropagation().fit(self.farben[:,4:7])
             self.farben = self.farben[af.cluster_centers_indices_]
@@ -521,17 +516,19 @@ class Farben(object):
                 if len(set(db.labels_)) > 2:
                     break
                 else:
-                    epsilon -= 0.01
+                    epsilon -= 0.05
 
                 if epsilon < 0:
                     break
 
-            db = DBSCAN(eps=0.05, min_samples=0).fit(np.hstack((hue_sin, hue_cos)))
+            print('self.cluster(mode=\'db_hue\'\n\tEpsilon: %s' % epsilon)
+            # db = DBSCAN(eps=0.05, min_samples=0).fit(np.hstack((hue_sin, hue_cos)))
 
             labels = set(db.labels_[db.labels_ != -1])
-
-            farben_tmp = np.zeros((len(labels),10),dtype='float32')
-            keep_tmp = np.ones(len(labels),dtype='bool')
+            print('labels:')
+            farben_tmp = np.zeros((len(labels),10), dtype='float32')
+            keep_tmp = np.ones(len(labels), dtype='bool')
+            # len_labels = np.zeros(len(labels), dtype='uint8')
 
             for i in labels:
                 '''
@@ -542,6 +539,11 @@ class Farben(object):
                     keep_tmp[i] = False
                 '''
                 farben_tmp[i] = h.weightedmean(self.farben[db.labels_ == i])
+                #len_labels[i] = len(self.farben[db.labels_ == i])
+                print('label: %s' % i)
+                #print('Anz.Farben: %s' % len_labels[i])
+
+            # keep_tmp[len_labels.argmax()] = False
 
             self.farben = farben_tmp[keep_tmp]
             self.recomp('rgb',['hsv','lab'])
@@ -572,7 +574,8 @@ class Farben(object):
             farben_tmp = np.zeros((len(labels),10),dtype='float32')
 
             for i in labels:
-                cond = self.farben[db.labels_ == i][:,3].argmax()
+                # cond = self.farben[db.labels_ == i][:,3].argmax()
+                cond = h.weightedmean(self.farben[db.labels_ == i])
                 f_tmp = self.farben[db.labels_ == i][cond]
                 pop = self.farben[db.labels_ == i][:,3].sum()
                 farben_tmp[i] = f_tmp
@@ -659,6 +662,25 @@ class Farben(object):
                     keep[i] = False
 
         self.farben = self.farben[keep]
+
+    def finalize(self):
+        # Passt die Ausgewählten Farben den target-Werten an.
+        # Hue bleibt dabei unangetastet.
+        # Erwarte Reihenfolge nach farbnamen_alt
+        # TODO target_sv sind die erwarteten Sättigungs und Helligkeitswerte.
+
+        target_dark_luma = 67
+        target_normal_luma = 128
+        target_light_luma = 189
+        target_muted_saturation = 77
+        target_vibrant_saturation = 256
+
+        # target_sv = np.zeros((6,2), dtype='uint8')
+        #target_sv
+
+
+        self.farben = self.farben[[0,3,1,4,2,5]]
+        pass
 
     def get_farben(self):
         return self.farben
